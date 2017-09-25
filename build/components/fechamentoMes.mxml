@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" title="Fechamento do Mês" width="566" height="332"
+	xmlns:control="br.com.thinklab.util.control.*" 
+	xmlns:ns1="com.adobe.flex.extras.controls.*" xmlns:components="components.*"
+	>
+	<mx:Script>
+		<![CDATA[
+			import entity.DespesaPorVencimento;
+			import entity.Vencimento;
+			import entity.ReceitaPorConvenio;
+			import entity.Despesa;
+			import entity.Socio;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			
+			[Bindable]
+			public var lista:ArrayCollection; 
+			private var rrv:relatorioResumoVencimento;
+            
+
+			public function init():void{
+				verificaFinalizacao();
+				calculaValoresTotais();
+				vencimento.text = rrv.vencimentoAtual.toString();
+			}
+			
+			public function calculaValoresTotais():void{
+				var valorTotalReceitas:Number = new Number();
+				var valorTotalDespesas:Number = new Number();
+				var myPattern:RegExp = /[.]/g;				    
+				var myPattern2:RegExp = /[,]/g;				    
+				for each (var recAtual:ReceitaPorConvenio in rrv.receitasPorConvenio){
+					//Alert.show("Receita: " + parseFloat(recAtual.rpcValorCreditado.replace(myPattern, "").replace(myPattern2, ".")));
+					valorTotalReceitas += parseFloat(recAtual.rpcValorCreditado.replace(myPattern, "").replace(myPattern2, "."));	
+				}
+				for each (var desAtual:DespesaPorVencimento in rrv.despesas){
+					//Alert.show("Despesa: " + parseFloat(desAtual.desValor.replace(myPattern, "").replace(myPattern2, ".")));
+					valorTotalDespesas += parseFloat(desAtual.dpvValor.replace(myPattern, "").replace(myPattern2, "."));	
+				}
+				receitas.text = moedaFormat.format(valorTotalReceitas);
+				despesas.text = moedaFormat.format(valorTotalDespesas);
+			}
+			
+			public function verificaFinalizacao():void{
+				sistemaService.getPendenciasFechamento();
+			}
+			
+			public function finalizarMes():void{
+				var myPattern:RegExp = /[.]/g;				    
+				var myPattern2:RegExp = /[,]/g;				    
+				var valorTotalReceitas:Number = parseFloat(receitas.text.replace(myPattern, "").replace(myPattern2, "."));
+				var valorTotalDespesas:Number = parseFloat(despesas.text.replace(myPattern, "").replace(myPattern2, "."));
+				if(valorTotalDespesas == 0.0){
+					Alert.show("Alguma despesa deve ser atribuída a este vencimento!" );					
+				}
+				else if(valorTotalReceitas == 0.0){
+					Alert.show("Alguma receita deve ser atribuída a este vencimento!" );					
+				} 
+				else {
+					Alert.yesLabel = "Sim";
+		  			Alert.noLabel = "Não";
+		  			Alert.show("Deseja remover as Despesas Zeradas?","Remover", Alert.YES | Alert.NO, this, confirmaRemocao);		
+				}
+			}
+			
+			public function confirmaRemocao(event:CloseEvent):void{
+				var removeZeradas:Boolean = new Boolean();
+				if (event.detail==Alert.YES)
+					removeZeradas = true;
+				else 
+					removeZeradas = false;
+				if(Application.application.isAdministrador()){
+					sistemaService.finalizaMes(removeZeradas);;
+				}
+				else {
+					Alert.show("Você não possui permissão \npara remover este registro!");
+				}
+			}
+			
+			public function hrdpGrid(event:ResultEvent):void{
+				lista = (ArrayCollection)(event.result);
+			}
+			
+			public function carregaDados():void{
+				var i : int;
+				vencimento.text = dg.selectedItem.socId;
+				receitas.text = dg.selectedItem.socNome;							
+			}
+			
+			public function setRrv(telaRrv:relatorioResumoVencimento):void{
+				this.rrv = telaRrv;
+			}	
+			
+			public function limpaCampos():void{
+				vencimento.text = "";
+				receitas.text = "";
+				despesas.text = "";
+			}
+			
+			public function resultadoFinalizacao(event:ResultEvent):void{
+				var resultado :Boolean = (Boolean) (event.result);
+				if(resultado){ 
+					Alert.show("Finalização realizada com sucesso!" );
+					PopUpManager.removePopUp(this);
+				}
+				else 
+					Alert.show("Não foi possível finalizar este vencimento!" );
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.message);
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:NumberFormatter id="moedaFormat"
+        decimalSeparatorFrom=","
+	    decimalSeparatorTo=","
+	    precision="2"
+	    rounding="none"
+	    thousandsSeparatorFrom="."
+	    thousandsSeparatorTo="."
+	    useNegativeSign="true"
+	    useThousandsSeparator="true" 
+    />
+    
+    
+	<mx:RemoteObject id="sistemaService" showBusyCursor="true"
+		fault="onFault(event)" destination="sistemaService">
+		<mx:method name="getPendenciasFechamento" fault="onFault(event)" result="hrdpGrid(event)"/>
+        
+        <mx:method name="finalizaMes" fault="onFault(event)" result="resultadoFinalizacao(event)">
+        	<mx:arguments>
+	            <commandArgs>{Boolean}</commandArgs>
+	        </mx:arguments>
+	    </mx:method>    
+            		
+	</mx:RemoteObject>
+	
+	<mx:Label x="10" y="10" text="Vencimento"/>
+	<mx:Label x="10" y="40" text="Receitas Líquidas"/>
+	<mx:TextInput x="120" y="8" width="69" id="vencimento" enabled="true" editable="false"/>
+	<control:DecimalInput x="120" y="38" width="154" id="receitas" enabled="true" currencyFormat="br" maxChars="12" text="0,00" focusEnabled="false" editable="false"/>
+	<mx:Label x="10" y="68" text="Total Despesas"/>
+	<control:DecimalInput x="120" y="66" width="154" id="despesas" enabled="true" currencyFormat="br" maxChars="12" text="0,00" focusEnabled="false" editable="false"/>
+	<mx:Panel id="pdg" x="0" y="97" layout="absolute" title="Problemas Encontrados" height="147" width="100%">
+		<mx:DataGrid id="dg" dataProvider="{lista}" x="0" y="0" width="100%" height="107">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Descrição" dataField="descricao"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ControlBar height="56">
+		<mx:Button label="Finalizar Mês" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{finalizarMes()}"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

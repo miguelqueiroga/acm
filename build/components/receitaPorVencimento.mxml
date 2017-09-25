@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" title="Receitas por Vencimento" width="620" height="446" xmlns:control="br.com.thinklab.util.control.*">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import entity.ReceitaPorConvenio;
+			import entity.Receita;
+			import entity.Departamento;
+			import entity.Vencimento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;			
+			
+			private var vencimentoAtual: Vencimento;
+            
+			[Bindable]
+			public var receitasPorConvenio:ArrayCollection; 
+            [Bindable]
+			public var receitas:ArrayCollection; 
+                         
+
+			public function init():void{
+				carregaVencimento();
+			}
+			
+			public function carregaVencimento():void{
+				vencimentoService.getVencimentoAtual();
+			}
+			
+			public function listaReceitas():void{
+				receitaPorConvenioService.getListPorVencimento(vencimentoAtual);
+			}
+			
+			public function hrdpGrid(event:ResultEvent):void{
+				receitasPorConvenio = (ArrayCollection)(event.result);
+				receitasPorConvenio.sort = new Sort();
+                receitasPorConvenio.sort.fields = [new SortField("rpcConvenio", false, false)];
+                receitasPorConvenio.refresh();
+			}
+			
+			public function setVencimento(event:ResultEvent):void{
+				vencimentoAtual = (Vencimento)(event.result);
+				vencimento.text = vencimentoAtual.toString();
+				listaReceitas();														
+			}
+			
+			public function alterar():void{
+				if ( trpc.selectedIndex == -1)
+					Alert.show("Selecione um Convênio!");
+				else {
+					Application.application.abrirReceitaPorConvenioAlteracao(this,(ReceitaPorConvenio)(trpc.selectedItem));				
+				}
+				
+			}			
+			public function criaNovo():void{
+				Application.application.abrirReceitaPorConvenio(this);
+				//PopUpManager.removePopUp(this);				
+			}
+			
+			public function limpaCampos():void{
+				carregaVencimento();
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function removerSelecionado():void{
+				Alert.yesLabel = "Sim";
+			  	Alert.noLabel = "Não";
+			  	Alert.show("Deseja remover esta Receita?","Remover", Alert.YES | Alert.NO, this, confirmaRemocao);				 
+			}
+			
+			public function confirmaRemocao(event:CloseEvent):void{
+				if (event.detail==Alert.YES) {
+					if(trpc.selectedIndex >= 0){
+						if(Application.application.isAdministrador()){
+							receitaPorConvenioService.remove( receitasPorConvenio.getItemAt(trpc.selectedIndex) );							
+						}
+						else {
+							Alert.show("Você não possui permissão \npara remover este registro!");
+						}
+					}
+					else {
+				 		Alert.show("Selecione um Registro!");
+				 	}			
+				}
+			}
+			
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.rootCause.localizedMessage, "OCORREU UM ERRO");
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+            
+            public function carregaDados():void{
+            	if(receitasPorConvenio.length > 0) {
+					if(trpc.selectedIndex < 0)
+						trpc.selectedIndex = 0;
+					this.receitas = (ArrayCollection) (trpc.selectedItem.receitasCollection);
+            		tr.dataProvider = receitas;
+            	}	
+            }
+            
+            public function receitaRemovida(event:ResultEvent):void{
+				limpaCampos();
+				listaReceitas();				
+				Alert.show( "Receita removida com sucesso!" );
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<mx:RemoteObject id="receitaPorConvenioService" showBusyCursor="true"
+		fault="onFault(event)" destination="receitaPorConvenioService">
+		<mx:method name="getListPorVencimento" fault="onFault(event)" result="hrdpGrid(event)">
+			<mx:arguments>
+	            <commandArgs>{Vencimento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>    	
+		<mx:method name="remove" fault="onFault(event)" result="receitaRemovida(event)">
+			<mx:arguments>
+	            <commandArgs>{ReceitaPorConvenio}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="vencimentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="vencimentoService">
+		<mx:method name="getVencimentoAtual" fault="onFault(event)" result="setVencimento(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:Label x="10" y="12" text="Vencimento"/>
+	<mx:TextInput x="88" y="10" width="68" id="vencimento" enabled="false"/>
+	<mx:Panel id="pdg0" x="0" y="38" layout="absolute" title="Receitas Cadastradas Por Convênio" height="155" width="100%">
+		<mx:DataGrid id="trpc" dataProvider="{receitasPorConvenio}" x="0" y="0" width="100%"
+			height="100%" change="{carregaDados()}" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Convênio" dataField="rpcConvenio" labelFunction="propChainLabelFunction" width="100"/>
+				<mx:DataGridColumn headerText="Qtde Exames" dataField="rpcQuantidadeExamesTotal" width="40"/>
+				<mx:DataGridColumn headerText="Valor Bruto" dataField="rpcValorBrutoTotal" width="40"/>
+				<mx:DataGridColumn headerText="Despesas" dataField="rpcValorDespesasTotal" width="40"/>
+				<mx:DataGridColumn headerText="Valor Creditado" dataField="rpcValorCreditado" width="50"/>								
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:Panel id="pdg" x="0" y="201" layout="absolute" title="Receitas Cadastradas" height="155" width="100%">
+		<mx:DataGrid id="tr" dataProvider="{receitas}" x="0" y="0" width="100%"
+			height="100%">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Departamento" dataField="recDepartamento" labelFunction="propChainLabelFunction" width="100"/>
+				<mx:DataGridColumn headerText="Qtde Exames" dataField="recQuantidadeExames" width="40"/>
+				<mx:DataGridColumn headerText="Valor Bruto" dataField="recValorBruto" width="40"/>
+				<mx:DataGridColumn headerText="Despesas" dataField="recValorDespesas" width="40"/>
+				<mx:DataGridColumn headerText="Valor Líquido" dataField="recValorLiquido" width="40"/>								
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ControlBar height="56">
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Remover" id="btnRemover" icon="@Embed(source='../images/menos.png')" click="{removerSelecionado()}"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed(source='../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" 
+	close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" 
+	title="Sócias da Receita Avulsa" width="620" height="322"
+	xmlns:control="br.com.thinklab.util.control.*" xmlns:components="components.*">
+	<mx:Script>
+		<![CDATA[
+			import entity.Socio;
+			import entity.ReceitaAvulsa;
+			import entity.ReceitaAvulsaSocio;
+			import entity.Vencimento;
+			import components.receitasAvulsas;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			//import components.DecimalInput;
+			
+			private var vencimentoAtual: Vencimento;
+            
+			[Bindable]
+			public var rasCollection:ArrayCollection; 
+            [Bindable]
+			public var socios:ArrayCollection;
+            public var janelaReceitaAvulsa:receitasAvulsas;           
+            public var estaAlterando:Boolean;  
+            
+
+			public function init():void {
+				habilitaValidadores(false);
+				estaAlterando = false;
+				habilitaEdic(false);
+				habilitaAlter(false);				
+				listaSocios();	
+				if(this.rasCollection == null)
+					this.rasCollection = new ArrayCollection();  					
+			}
+			
+			public function setJanelaReceitaAvulsa(janela:receitasAvulsas):void{
+				this.janelaReceitaAvulsa = janela;
+				if(janelaReceitaAvulsa.getReceitasAvulsasSocias() != null) {
+					this.rasCollection = janelaReceitaAvulsa.getReceitasAvulsasSocias();
+					dg.dataProvider = this.rasCollection;					
+				}				  
+			}
+			
+			public function fecharJanela():void{
+				//Alert.show("tentei fechar");
+				PopUpManager.removePopUp(this);
+			}
+			public function listaSocios():void{
+				socioService.getList();				
+			}
+			
+			public function setSociosCombo(event:ResultEvent):void{
+				socios = (ArrayCollection)(event.result);
+				sociosCombo.dataProvider = socios;						
+			}
+			
+			public function carregaDados():void{
+				if(rasCollection.length > 0) {
+					if(dg.selectedIndex < 0)
+						dg.selectedIndex = 0;
+					var i : int;
+					porcentagem.text = dg.selectedItem.rasPorcentagem;	
+					for ( i=0; i < socios.length; i++){
+						var cp3 : Socio = (Socio) (dg.selectedItem.rasSocio);
+						var cp4 : Socio = (Socio) (socios.getItemAt(i));
+						if (cp3.socId == cp4.socId)
+							sociosCombo.selectedIndex = i;
+					}
+				}
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					habilitaValidadores(true);
+					habilitaEdic(true);
+					carregaDados();
+					habilitaAlter(true);
+					sociosCombo.setFocus();
+					estaAlterando = true;
+				}
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				sociosCombo.enabled = hab;
+				porcentagem.enabled = hab;
+			}
+			
+			public function cancelaOper():void{
+				limpaCampos();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				carregaDados();
+				habilitaValidadores(false);				
+			}
+			
+			public function criaNovo():void{
+				habilitaValidadores(true);
+				limpaCampos();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				sociosCombo.setFocus();
+			}
+			
+			public function limpaCampos():void{
+				sociosCombo.selectedIndex = -1;
+				porcentagem.text = "0,00"; 
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				btnNovo.enabled = !hab;
+				btnAlterar.enabled = !hab;
+				btnSalvar.enabled = hab;
+				btnCancelar.enabled = hab;
+				btnRemover.enabled = !hab;
+				btnFechar.enabled = !hab;
+				pdg.enabled = !hab;			
+			}
+			
+			public function habilitaValidadores(hab:Boolean):void{
+				validadorSociosCombo.enabled = hab;
+				validadorPorc.enabled = hab;	
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function getParameters():ReceitaAvulsaSocio{
+				var ras : ReceitaAvulsaSocio = new ReceitaAvulsaSocio();
+				ras.rasPorcentagem = porcentagem.text;
+				ras.rasSocio = (Socio) (socios.getItemAt(sociosCombo.selectedIndex));
+				return ras;
+			}
+			
+			public function salvarSocio():void{
+				if (validar()) {
+					//TODO Verificar se está alterando
+					if(!estaAlterando) {
+						rasCollection.addItem( this.getParameters() );
+						Alert.show("Sócio adicionado com sucesso!");
+					}
+					else {
+						var ras : ReceitaAvulsaSocio = (ReceitaAvulsaSocio) (rasCollection.getItemAt(dg.selectedIndex));
+						ras.rasPorcentagem = porcentagem.text;
+						ras.rasSocio = (Socio) (socios.getItemAt(sociosCombo.selectedIndex));
+						Alert.show("Sócio alterado com sucesso!");
+				 		estaAlterando = false;
+					}
+					habilitaValidadores(false);
+					limpaCampos();
+					habilitaEdic(false);
+					habilitaAlter(false);
+					
+				 }
+			}
+			
+			public function removerSelecionado():void{
+				 if (dg.selectedIndex >= 0) {
+					janelaReceitaAvulsa.addRASARemover((ReceitaAvulsaSocio)(rasCollection.removeItemAt(dg.selectedIndex)));
+					limpaCampos();
+				 }
+				 else {
+				 	Alert.show("Selecione um Registro!");
+				 }
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			public function validate(v:Validator):void{
+				v.validate();								
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.message);
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+
+			
+		]]>
+	</mx:Script>
+	
+	<mx:TextInput id="inputMin" text="1" visible="false"/>
+	<mx:TextInput id="inputMax" text="999999" visible="false"/>
+	
+	<mx:Array id="validadores">
+		<components:MyNumberValidator source="{porcentagem}" id="validadorPorc" property="text" 
+			thousandsSeparator="." decimalSeparator=","
+			minValue="{Number(inputMin.text)}" maxValue="{Number(inputMax.text)}"
+			lowerThanMinError="O valor da porcentagem precisa ser informado."/>
+		
+		<mx:NumberValidator id="validadorSociosCombo" source="{sociosCombo}" lowerThanMinError="Escolha um Sócio." 
+			property="selectedIndex" minValue="0" 
+		/>		
+	</mx:Array>
+	
+	
+	<mx:RemoteObject id="socioService" showBusyCursor="true"
+		fault="onFault(event)" destination="socioService">
+		<mx:method name="getList" fault="onFault(event)" result="setSociosCombo(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:ComboBox dataProvider="{socios}" x="56" y="8" width="217" id="sociosCombo" enabled="true" labelField="socNome" change="{validate(validadorSociosCombo)}">
+	</mx:ComboBox>
+	<control:DecimalInput x="56" y="36" width="89" id="porcentagem" currencyFormat="br" maxChars="10" text="0,00" change="{validate(validadorPorc)}"/>
+	<mx:Label x="14" y="10" text="Sócio"/>
+	<mx:Label x="15" y="38" text="Valor"/>
+	<mx:Panel id="pdg" x="0" y="68" layout="absolute" title="Sócios Cadastradas" height="100%" width="100%">
+		<mx:DataGrid id="dg" dataProvider="{rasCollection}" x="0" y="0" width="100%"
+			change="{carregaDados()}" height="100%" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Sócio" dataField="rasSocio" labelFunction="propChainLabelFunction" width="80"/>
+				<mx:DataGridColumn headerText="Porcentagem" dataField="rasPorcentagem" width="30"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ControlBar height="56">
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarSocio()}"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')" click="{cancelaOper()}"/>
+		<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{fecharJanela()}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

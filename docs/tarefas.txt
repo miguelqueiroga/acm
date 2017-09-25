@@ -1,0 +1,19 @@
+22/02/10 --------------------------------------------------------------------------------------------------
+
+Ao sair, limpar o campo de usuario logado.
+
+Não permitir que um usuário se delete.
+
+Na tela de usuário o Contador tem privilégios para fazer tudo.
+
+13/04/10 --------------------------------------------------------------------------------------------------
+
+zerar os valor das despesas ao fechar o vencimento atual
+
+relatorio simplificado de despesas apenas com nome e valor por mes dentro de um ano
+
+relatorio de despesas organizado por categorias e com subtotais
+
+01/10/10 --------------------------------------------------------------------------------------------------
+
+Faltam corrigir os problemas: 6a, 9, 10, 15a e 21.

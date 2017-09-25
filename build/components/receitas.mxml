@@ -1,0 +1,869 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="absolute" title="Cadastro de Receitas" width="582" height="450" 
+	xmlns:control="br.com.thinklab.util.control.*" 
+	xmlns:ns1="com.adobe.flex.extras.controls.*" xmlns:components="components.*"
+	>
+	<mx:Style source="style.css" />
+		
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import entity.Convenio;
+			import entity.ReceitaPorConvenio;
+			import entity.Receita;
+			import entity.Despesa;
+			import entity.CategoriaDespesa;
+			import entity.Departamento;
+			import entity.Vencimento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			//import components.DecimalInput;
+			
+			private var vencimentoAtual: Vencimento;
+			private var salvou: Boolean;
+            private var estaAlterandoDepartamento: Boolean;
+            
+			[Bindable]
+			public var departamentos:ArrayCollection;
+            [Bindable]
+			public var receitasCollection:ArrayCollection;
+            public var receitasARemoverCollection:ArrayCollection;
+            public var receitaConvenio:ReceitaPorConvenio;
+            public var receitaConvenioConsulta:ReceitaPorConvenio;
+            public var janelaReceitaPorVencimento:receitaPorVencimento;
+            public var janelaAuditoriaReceitaPorVencimento:auditoriaReceitaPorVencimento;
+            [Bindable]
+			public var convenios:ArrayCollection;
+            public var myPattern:RegExp = /[.]/g;				    
+			public var myPattern2:RegExp = /[,]/g;		    
+			
+			[Bindable]
+			private var chosenMonth:Date = new Date();
+            
+            private function updateDates():void
+            {
+                chosenMonth = dataDeposito.selectedDate;
+            }				
+            
+            public function init():void{
+				listaConvenios();
+				carregaVencimento();
+				listaDepartamentos();		
+				receitasARemoverCollection = new ArrayCollection;	
+				receitasCollection = new ArrayCollection;	
+				salvou = false;
+			}
+			
+			public function listaDepartamentos():void{
+				departamentoService.getList();				
+			}
+			
+			public function setDepartamentosCombo(event:ResultEvent):void{
+				departamentos = (ArrayCollection)(event.result);
+				departamentosCombo.dataProvider = departamentos;
+				departamentosCombo.selectedIndex = -1;		
+				departamentos.sort = new Sort();
+                departamentos.sort.fields = [new SortField("depNome", false, false)];
+                departamentos.refresh();				
+			}
+			
+			public function setConvenioCombo(event:ResultEvent):void{
+				if(convenios == null){ 
+					this.convenios = (ArrayCollection)(event.result);
+					conveniosCombo.dataProvider = convenios;
+					convenios.sort = new Sort();
+                	convenios.sort.fields = [new SortField("conNome", false, false)];
+                	convenios.refresh();	
+                	if(receitaConvenio != null) {
+						var i : int;
+						for ( i=0; i < convenios.length; i++){
+							var cp : Convenio = receitaConvenio.rpcConvenio;
+							var cp2 : Convenio = (Convenio) (convenios.getItemAt(i));
+							if (cp.conId == cp2.conId)
+								conveniosCombo.selectedIndex = i;
+						}
+					}
+					else conveniosCombo.selectedIndex = -1;					
+				}
+			}
+			
+			public function setReceitaConvenio(rc:ReceitaPorConvenio):void{
+				this.receitaConvenio = rc;
+				if(rc == null)
+					limpaCampos();
+				else atualizaCampos();
+			}
+			
+			public function setJanelaReceitaPorVencimento(jrpv:receitaPorVencimento):void{
+				this.janelaReceitaPorVencimento = jrpv;
+			}
+			
+			public function setJanelaAuditoriaReceitaPorVencimento(jrpv:auditoriaReceitaPorVencimento):void{
+				this.janelaAuditoriaReceitaPorVencimento = jrpv;
+			}
+			
+			public function atualizaCampos():void {
+				if(convenios != null) {
+					var i : int;
+					for ( i=0; i < convenios.length; i++){
+						var cp : Convenio = receitaConvenio.rpcConvenio;
+						var cp2 : Convenio = (Convenio) (convenios.getItemAt(i));
+						if (cp.conId == cp2.conId)
+							conveniosCombo.selectedIndex = i;
+					}
+				}			
+				vencimentoAtual = receitaConvenio.rpcVencimento;
+				mesReferencia.text = vencimentoAtual.venNome;
+				var tokens : Array = receitaConvenio.rpcDataDeposito.split("/");
+				dataDeposito.displayedYear = tokens[1];
+				dataDeposito.displayedMonth = tokens[0];				
+				
+				totalProcedimentos.text = receitaConvenio.rpcQuantidadeExamesTotal;
+				//totalExames.text = receitaConvenio.rpcQuantidadeExamesTotal;
+				inss.text = receitaConvenio.rpcINSSTotal;
+				aliquotaIR.text = receitaConvenio.rpcAliquotaIR;
+				deducaoIR.text = receitaConvenio.rpcDeducaoIR;
+				valorExames.text = receitaConvenio.rpcValorExames;
+				valorFilmes.text = receitaConvenio.rpcValorFilmes;
+				valorMateriais.text = receitaConvenio.rpcValorMateriais;
+				valorMedicamentos.text = receitaConvenio.rpcValorMedicamentos;
+				
+				//ir.text = receitaConvenio.rpcIRTotal;
+				pagPart.text = receitaConvenio.rpcPagamentoParticular;
+				outrasDespesas.text = receitaConvenio.rpcOutrasDespesas;
+				
+				//totalCreditos.text = receitaConvenio.rpcValorBrutoTotal;
+				//totalDebitos.text = receitaConvenio.rpcValorDespesasTotal;
+				//valorCreditado.text = receitaConvenio.rpcValorCreditado;
+				
+				this.receitasCollection = receitaConvenio.receitasCollection;
+				dg.dataProvider = this.receitasCollection;
+				calculaTotalCreditos();
+				
+			}
+			
+			public function setReceitas(receitas:ArrayCollection):void{
+				this.receitasCollection = receitas;
+				//dg.dataProvider = this.receitasCollection;
+				atualizaRestantes();
+			}
+			
+			public function getReceitas():ArrayCollection{
+				return this.receitasCollection;
+			}
+			
+			public function carregaVencimento():void{
+				vencimentoService.getVencimentoAtual();
+			}
+			
+			public function listaConvenios():void{
+				convenioService.getList();
+			}
+			
+			public function setVencimento(event:ResultEvent):void{
+				if(vencimentoAtual == null) {
+					vencimentoAtual = (Vencimento)(event.result);	
+					mesReferencia.text = vencimentoAtual.venNome;		
+					var tokens : Array = mesReferencia.text.split("/");
+					dataDeposito.displayedYear = tokens[0];
+					var mes:int = parseInt(tokens[1]);
+					dataDeposito.displayedMonth = (mes - 1);		
+				}	
+			}
+			
+			public function setVencimentoAtual(v:Vencimento):void{
+				vencimentoAtual = v;	
+				mesReferencia.text = vencimentoAtual.venNome;		
+				var tokens : Array = mesReferencia.text.split("/");
+				dataDeposito.displayedYear = tokens[1];
+				var mes:int = parseInt(tokens[0]);
+				dataDeposito.displayedMonth = (mes - 1);
+			}
+			
+			public function getParameters():Receita{
+				var rec : Receita = new Receita();
+				rec.recQuantidadeExames = exames.text;
+				rec.recValorBruto = valor.text;
+				rec.recDepartamento = (Departamento) (departamentos.getItemAt(departamentosCombo.selectedIndex));
+				//Alert.show("exames " + rec.recQuantidadeExames + " valor " + rec.recValorBruto + " departamento " + rec.recDepartamento.depNome);
+				return rec;
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				departamentosCombo.enabled = hab;
+				exames.enabled = hab;
+				valor.enabled = hab;
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				btnNovo.enabled = !hab;
+				btnAlterar.enabled = !hab;
+				btnSalvarDepartamento.enabled = hab;
+				btnCancelar.enabled = hab;
+				btnRemover.enabled = !hab;
+			}
+			
+			public function habilitaValidadores(hab:Boolean):void{
+				validadorDepartamentosCombo.enabled = hab;
+				validadorValor.enabled = hab;
+				validadorExames.enabled = hab;					
+			}
+			
+			public function carregaDadosDepartamento():void{
+				if(receitasCollection.length > 0) {
+					if(dg.selectedIndex < 0)
+						dg.selectedIndex = 0;
+					var i : int;
+					Alert.show(dg.selectedIndex + " index");
+					exames.text = dg.selectedItem.recQuantidadeExames;
+					Alert.show(dg.selectedItem.recQuantidadeExames + " qtde");
+					valor.text = dg.selectedItem.recValorBruto;	
+					Alert.show(dg.selectedItem.recValorBruto+ " valor");
+					for ( i=0; i < departamentos.length; i++){
+						var cp3 : Departamento = (Departamento) (dg.selectedItem.recDepartamento);
+						var cp4 : Departamento = (Departamento) (departamentos.getItemAt(i));
+						if (cp3.depId == cp4.depId)
+							departamentosCombo.selectedIndex = i;
+					}
+					Alert.show(dg.selectedItem.recDepartamento.depNome + " dep ");					
+				}
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					habilitaValidadores(true);
+					habilitaEdic(true);
+					carregaDadosDepartamento();
+					habilitaAlter(true);
+					departamentosCombo.setFocus();
+					estaAlterandoDepartamento = true;
+				}
+			}
+			
+			public function cancelaOper():void{
+				habilitaValidadores(false);
+				limpaCamposDepartamento();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				carregaDadosDepartamento();									
+			}
+			
+			public function criaNovo():void{
+				habilitaValidadores(true);
+				limpaCamposDepartamento();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				departamentosCombo.setFocus();
+				estaAlterandoDepartamento = false;
+			}
+			
+			public function salvarDepartamento():void{
+				if (validarDepartamento()) {
+					//TODO Verificar se está alterando
+					if(!estaAlterandoDepartamento) {
+						receitasCollection.addItem( this.getParameters() );
+						Alert.show("Departamento adicionado com sucesso!");
+					}
+					else {
+						var rec : Receita = (Receita) (receitasCollection.getItemAt(dg.selectedIndex));
+						rec.recQuantidadeExames = exames.text;
+						rec.recValorBruto = valor.text;
+						rec.recDepartamento = (Departamento) (departamentos.getItemAt(departamentosCombo.selectedIndex));
+						Alert.show("Departamento alterado com sucesso!");
+				 		estaAlterandoDepartamento = false;
+					}
+					atualizaRestantes();
+					habilitaValidadores(false);
+					limpaCamposDepartamento();
+					habilitaEdic(false);
+					habilitaAlter(false);					
+				 }
+			}
+			
+			public function limpaCamposDepartamento():void{
+				exames.text = "";
+				departamentosCombo.selectedIndex = -1;
+				valor.text = "0,00"; 
+			}
+			
+			public function proximaAba():void{
+				if(btnProximo.enabled == true)
+					abas.selectedIndex++;
+				atualizaBotoes()
+			}
+			
+			public function abaAnterior():void{
+				if(btnAnterior.enabled == true)
+					abas.selectedIndex--;
+				atualizaBotoes()
+			}
+			
+			public function limpaCampos():void{
+				// Aba 1
+				conveniosCombo.selectedIndex = -1;
+				chosenMonth = new Date();
+				dataDeposito.selectedDate = chosenMonth;
+				mesReferencia.text = vencimentoAtual.venNome;
+				totalProcedimentos.text = "";
+				aliquotaIR.text = "0,00";
+				deducaoIR.text = "0,00";
+				valorExames.text= "0,00";
+				valorMateriais.text= "0,00";
+				valorMedicamentos.text= "0,00";
+				valorFilmes.text= "0,00";
+				ir.text= "0,00";
+				inss.text= "0,00";
+				pagPart.text= "0,00";
+				outrasDespesas.text= "0,00";
+				totalCreditos.text= "0,00";
+				totalDebitos.text= "0,00";
+				valorCreditado.text= "0,00";
+				
+				// Aba 2
+				
+				receitasCollection = new ArrayCollection;
+				receitasARemoverCollection = new ArrayCollection;
+				restantesExames.text = "";
+				restantesReceitas.text = "0,00";
+								
+				// Aba 3
+				
+				atualizaResumo();
+			}
+			
+			public function atualizaResumo():void{
+				totalCreditosResumo.text = totalCreditos.text;
+				totalDebitosResumo.text = totalDebitos.text;
+				valorCreditadoResumo.text = valorCreditado.text;
+				dataDepositoResumo.displayedYear = dataDeposito.displayedYear;
+				dataDepositoResumo.displayedMonth = dataDeposito.displayedMonth;
+				if(conveniosCombo.selectedIndex >= 0)
+					convenioResumo.text = conveniosCombo.selectedItem.conNome;
+				mesReferenciaResumo.text = mesReferencia.text;
+			}
+			
+			public function atualizaBotoes():void{
+				if (abas.selectedIndex == 2)
+					atualizaResumo();
+				if(abas.selectedIndex == 2)
+					btnProximo.enabled = false;
+				if(abas.selectedIndex > 0)
+					btnAnterior.enabled = true;
+				if(abas.selectedIndex == 0)
+					btnAnterior.enabled = false;
+				if(abas.selectedIndex < 2)
+					btnProximo.enabled = true;
+			}
+			
+			public function despesaGravado(event:ResultEvent):void{
+				Alert.show( "Receita salva com sucesso!" );
+				var receita:ReceitaPorConvenio = event.result as ReceitaPorConvenio;
+				this.receitaConvenioConsulta = receita;
+				Alert.yesLabel = "Sim";
+				Alert.noLabel = "Não";
+				Alert.show("Deseja cadastrar receita para um novo convênio?","Confirmação",Alert.YES|Alert.NO, this, fConfirmarNovoConvenio);
+			}			
+            
+		    private function fConfirmarNovoConvenio(event:CloseEvent):void
+		    {
+		       if (event.detail == Alert.NO)
+		       {
+		          	if(janelaReceitaPorVencimento != null)
+		          		janelaReceitaPorVencimento.init();
+		          	else  if(janelaAuditoriaReceitaPorVencimento != null)
+		          		janelaAuditoriaReceitaPorVencimento.init();
+            		PopUpManager.removePopUp(this);
+		       }
+		       else if (event.detail == Alert.YES)
+		       {
+		          	setReceitaConvenio(null);
+		       }
+		    }
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function salvarReceitas():void{
+				 if (validar()) {
+				 	if(Application.application.isAdministrador()) {
+						var rc:ReceitaPorConvenio = new ReceitaPorConvenio();
+						if(receitaConvenio != null) {
+							rc = receitaConvenio;
+							for each (var receita:Receita in receitasARemoverCollection) {
+								if(receita.recId != 0)
+									receitaService.remove(receita);							
+							}
+						}
+						//Alert.show("carreguei receitas");
+						rc.rpcConvenio = (Convenio) (conveniosCombo.selectedItem);
+						rc.rpcVencimento = vencimentoAtual;
+						rc.rpcDataDeposito = (dataDeposito.displayedMonth + "/" + dataDeposito.displayedYear);
+						rc.rpcQuantidadeExamesTotal = totalProcedimentos.text;
+						rc.rpcAliquotaIR = aliquotaIR.text;
+						rc.rpcDeducaoIR= deducaoIR.text;
+						rc.rpcValorExames = valorExames.text;
+						rc.rpcValorFilmes = valorFilmes.text;
+						rc.rpcValorMateriais = valorMateriais.text;
+						rc.rpcValorMedicamentos = valorMedicamentos.text;
+						
+						//Alert.show("setei 1");
+						rc.rpcINSSTotal = inss.text;
+						rc.rpcIRTotal = ir.text;
+						rc.rpcPagamentoParticular = pagPart.text;
+						rc.rpcOutrasDespesas = outrasDespesas.text;
+						
+						//Alert.show("setei 2");
+						rc.rpcValorBrutoTotal = totalCreditos.text;
+						rc.rpcValorDespesasTotal = totalDebitos.text;
+						rc.rpcValorCreditado = valorCreditado.text;
+						
+						//Alert.show("setei 3");
+						for each (var rec : Receita in receitasCollection) {
+							rec.recReceitaPorConvenio = rc;
+						}
+						//Alert.show("setei 4");
+						rc.receitasCollection = this.receitasCollection;
+						
+						receitaPorConvenioService.save(rc);
+						
+						//Alert.show("setei 5");
+						limpaCampos();
+						salvou = true;
+						//TODO voltar para a janela anterior
+					 }
+					 else {
+						Alert.show("Você não possui permissão \npara salvar registros!");	 	
+					 }
+				 }
+			}
+			
+			public function removerSelecionado():void{
+				 if (dg.selectedIndex >= 0) {
+					receitasARemoverCollection.addItem(receitasCollection.getItemAt(dg.selectedIndex));
+					receitasCollection.removeItemAt(dg.selectedIndex);
+					dg.dataProvider = receitasCollection;
+					atualizaRestantes();
+					/* limpaCampos(); */
+				 }
+				 else {
+				 	Alert.show("Selecione Departamento para ser removido!");
+				 }
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			
+			public function validarDepartamento():Boolean{
+				var valido : Boolean;
+				for each (var v : Validator in validadoresDepartameto ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}					
+				}
+				return valido;
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.rootCause.localizedMessage, "OCORREU UM ERRO");
+			}
+			
+			public function receitaRemovida(event:ResultEvent):void
+			{												
+				//Alert.show("removi");
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+            
+            private function calculaValorIR():void{
+            	//Alert.show("calculaValorIR");
+            	var valorIR:Number = new Number();
+            	//Alert.show("aliquotaIR: " + aliquotaIR.text);
+            	//Alert.show("totalCreditos: " + totalCreditos.text);
+            	//Alert.show("totalDebitos: " + totalDebitos.text);
+            	//Alert.show("inss: " + inss.text);
+            	//Alert.show("deducaoIR: " + deducaoIR.text);            	
+            	valorIR = ((parseFloat(aliquotaIR.text.replace(myPattern2, "."))/100) * (parseFloat(totalCreditos.text.replace(myPattern, "").replace(myPattern2, ".")) - parseFloat(inss.text.replace(myPattern, "").replace(myPattern2, ".")))) - parseFloat(deducaoIR.text.replace(myPattern2, "."));
+            	//Alert.show("ValorIR: " + valorIR);
+            	if(valorIR > 0)
+            		ir.text = formataNumberToMoeda(valorIR);
+            	else 
+            		ir.text = "0,00";
+            		
+            	calculaTotalDebitos();
+            }
+            
+            private function calculaTotalDebitos():void{
+            	//Alert.show("calculaTotalDebitos");
+            	var valorTotalDebitos:Number = new Number();
+            	valorTotalDebitos = parseFloat(ir.text.replace(myPattern, "").replace(myPattern2, ".")) + parseFloat(inss.text.replace(myPattern, "").replace(myPattern2, ".")) + parseFloat(pagPart.text.replace(myPattern2, ".")) + parseFloat(outrasDespesas.text.replace(myPattern2, "."));
+            	totalDebitos.text = formataNumberToMoeda (valorTotalDebitos);
+            	calculaValorCreditado();
+            }
+
+			private function calculaTotalCreditos():void{
+            	//Alert.show("calculaTotalCreditos");
+            	var valorTotalCreditos:Number = new Number();
+            	valorTotalCreditos = parseFloat(valorExames.text.replace(myPattern2, ".")) + parseFloat(valorMateriais.text.replace(myPattern2, ".")) + parseFloat(valorMedicamentos.text.replace(myPattern2, ".")) + parseFloat(valorFilmes.text.replace(myPattern2, "."));
+            	totalCreditos.text = formataNumberToMoeda(valorTotalCreditos);
+            	calculaValorIR();
+            	calculaValorCreditado();
+            }
+
+			private function calculaValorCreditado():void{
+            	//Alert.show("calculaValorCreditado");
+            	atualizaTotalCreditos();
+            	var myPattern:RegExp = /[.]/g;				    
+				var myPattern2:RegExp = /[,]/g;				    
+				var valorTotalCreditado:Number = new Number();
+            	valorTotalCreditado = parseFloat(totalCreditos.text.replace(myPattern, "").replace(myPattern2, ".")) - parseFloat(totalDebitos.text.replace(myPattern, "").replace(myPattern2, "."));
+            	valorCreditado.text = formataNumberToMoeda(valorTotalCreditado);					
+				salvou = false;
+            }
+
+			private function atualizaRestantes():void{
+				//Alert.show("atualizaRestantes");
+            	var valorTotalReceitas:Number = new Number();
+				var examesTotal:int = 0;
+				var myPattern:RegExp = /[.]/g;				    
+				var myPattern2:RegExp = /[,]/g;				    
+				for each (var recAtual:Receita in receitasCollection)
+				{
+					examesTotal += parseInt(recAtual.recQuantidadeExames);
+				    valorTotalReceitas += parseFloat(recAtual.recValorBruto.replace(myPattern, "").replace(myPattern2, "."));
+				}
+				
+				var restanteValor:Number = parseFloat(totalCreditos.text.replace(myPattern, "").replace(myPattern2, ".")) - valorTotalReceitas;
+				var restanteExames:int = parseInt(totalProcedimentos.text) - examesTotal;
+				this.restantesExames.text = restanteExames.toString();
+				this.restantesReceitas.text = formataNumberToMoeda(restanteValor);
+				salvou = false;		           	
+            }
+            
+            private function atualizaTotalExames():void{
+            	atualizaRestantes();	
+            }
+            
+            private function atualizaTotalCreditos():void{
+            	atualizaRestantes();	
+            }
+            
+            public function validate(v:Validator):void{
+				v.validate();								
+			}
+			
+			public function checarConvenioExiste():void{
+				if(conveniosCombo.selectedIndex >= 0) {
+					var convenio: Convenio = convenios.getItemAt(conveniosCombo.selectedIndex) as Convenio;
+					receitaPorConvenioService.getConvenioPorVencimento(convenio, vencimentoAtual);
+				}				
+			}			
+            
+		    public function convenioComboAlterado(event:ResultEvent):void {
+		    	if(event.result != null) {
+					var receita:ReceitaPorConvenio = event.result as ReceitaPorConvenio;
+					this.receitaConvenioConsulta = receita;
+					Alert.yesLabel = "Sim";
+					Alert.noLabel = "Não";
+					Alert.show("O convênio selecionado já foi cadastrado para este vencimento.\nDeseja alterá-lo?","Confirmação",Alert.YES|Alert.NO, this, fConfirmarAlteracao);
+				}
+			}			
+            
+		    private function fConfirmarAlteracao(event:CloseEvent):void
+		    {
+		       if (event.detail == Alert.NO)
+		       {
+		          	conveniosCombo.selectedIndex = -1;
+		          	receitaConvenioConsulta = null;
+		       }
+		       else if (event.detail == Alert.YES)
+		       {
+		          	setReceitaConvenio(receitaConvenioConsulta);
+		       }
+		    } 			
+            
+		    private function fechar():void {
+            	if(!salvou) {
+            		Alert.yesLabel = "Sim";
+					Alert.noLabel = "Não";
+					Alert.cancelLabel = "Cancelar";
+					Alert.buttonWidth = 80;
+					Alert.show("Deseja salvar as alterações?","Confirmação",Alert.YES|Alert.NO|Alert.CANCEL, this, fConfirmar);
+            	}	
+            	else { 
+            		if(janelaReceitaPorVencimento != null)
+		          		janelaReceitaPorVencimento.init();
+		          	else  if(janelaAuditoriaReceitaPorVencimento != null)
+		          		janelaAuditoriaReceitaPorVencimento.init();
+            		PopUpManager.removePopUp(this);
+            	}			
+            }
+			
+			private function fConfirmar(event:CloseEvent):void
+		    {
+		       if (event.detail == Alert.NO)
+		       {
+		          	if(janelaReceitaPorVencimento != null)
+		          		janelaReceitaPorVencimento.init();
+		          	else  if(janelaAuditoriaReceitaPorVencimento != null)
+		          		janelaAuditoriaReceitaPorVencimento.init();
+            		PopUpManager.removePopUp(this);
+		       }
+		       else if (event.detail == Alert.YES)
+		       {
+		          	salvarReceitas();
+		       }
+		    } 
+		    
+		    private function formataMoeda (input: TextInput):void {
+		    	if(input.text == "")
+		    		input.text = "0,00"
+		    	else if(input.text != "0,00") 
+		    		input.text = moedaFormat.format(input.text);
+		    } 
+		    
+		    private function formataNumberToMoeda (valor: Number): String {
+		    	var fator:Number = Math.pow(10, 2);
+				var result:Number = Number( int((valor * fator) + 0.5) / fator );
+				return moedaFormat.format(result);				
+		    } 
+		    
+		    private function selecionaTexto(input: TextInput):void {
+		    	input.selectionBeginIndex = 0;
+		    	input.selectionBeginIndex = input.text.length;
+		    } 
+		]]>
+	</mx:Script>
+	
+	<mx:NumberFormatter id="moedaFormat"
+        decimalSeparatorFrom=","
+	    decimalSeparatorTo=","
+	    precision="2"
+	    rounding="none"
+	    thousandsSeparatorFrom="."
+	    thousandsSeparatorTo="."
+	    useNegativeSign="true"
+	    useThousandsSeparator="true" 
+    />
+    
+    <mx:DateFormatter id="dateFormatter" formatString="MM/YYYY" />   
+
+	
+	<mx:Array id="validadores">
+		
+		<mx:NumberValidator id="validadorConveniosCombo" source="{conveniosCombo}" lowerThanMinError="Escolha um Convênio." 
+			property="selectedIndex" minValue="0" enabled="true"
+		/>
+		
+		<mx:StringValidator id="validadorTotalProcedimentos" source="{totalProcedimentos}" required="true" property="text"
+			requiredFieldError="A quantidade de exames deve ser informada." enabled="true"
+		/>
+		
+		<components:MyNumberValidator id="validadorValorExames" source="{valorExames}" property="text" 
+			thousandsSeparator="." decimalSeparator=","
+			minValue="{Number(inputMin.text)}" maxValue="{Number(inputMax.text)}"
+			lowerThanMinError="O valor dos exames precisa ser informado." enabled="true"/>
+		
+	</mx:Array>
+		
+	<mx:Array id="validadoresDepartameto">
+		<mx:StringValidator id="validadorExames" source="{exames}" required="true" property="text"
+			requiredFieldError="Quantidade de exames não pode ser vazio."
+		/>
+		
+		<mx:StringValidator id="validadorValor" source="{valor}" required="true" property="text"
+			requiredFieldError="Valor não pode ser vazio."
+		/>
+		
+		<mx:NumberValidator id="validadorDepartamentosCombo" source="{departamentosCombo}" lowerThanMinError="Escolha um Departamento." 
+			property="selectedIndex" minValue="0" 
+		/>		
+	</mx:Array>
+	
+	
+	<mx:RemoteObject id="receitaPorConvenioService" showBusyCursor="true"
+		fault="onFault(event)" destination="receitaPorConvenioService">
+		<mx:method name="save" fault="onFault(event)" result="despesaGravado(event)">
+			<mx:arguments>
+	            <commandArgs>{ReceitaPorConvenio}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>            		
+    	<mx:method name="getConvenioPorVencimento" fault="onFault(event)" result="convenioComboAlterado(event)">
+			<mx:arguments>
+	            <commandArgs>{Convenio}</commandArgs>
+	            <commandArgs>{Vencimento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="receitaService" showBusyCursor="true"
+		fault="onFault(event)" destination="receitaService">
+		<mx:method name="remove" fault="onFault(event)" result="receitaRemovida(event)">
+			<mx:arguments>
+	            <commandArgs>{Receita}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="convenioService" showBusyCursor="true"
+		fault="onFault(event)" destination="convenioService">
+		<mx:method name="getList" fault="onFault(event)" result="setConvenioCombo(event)"/>              		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="vencimentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="vencimentoService">
+		<mx:method name="getVencimentoAtual" fault="onFault(event)" result="setVencimento(event)"/>            		
+	</mx:RemoteObject>
+
+	<mx:RemoteObject id="departamentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="departamentoService">
+		<mx:method name="getList" fault="onFault(event)" result="setDepartamentosCombo(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:TabNavigator x="0" y="0" width="562" height="327" creationPolicy="all" id="abas" selectedIndex="0" tabIndexChange="{atualizaBotoes()}" change="atualizaBotoes()">
+		<mx:Canvas label="Dados Gerais" width="100%" height="100%">
+			<mx:ComboBox dataProvider="{convenios}" x="10" y="25" width="365" labelField="conNome" focusEnabled="true" change="validate(validadorConveniosCombo); checarConvenioExiste()" id="conveniosCombo" height="29" fontSize="12"></mx:ComboBox>
+			<mx:VBox x="383" y="26"  height="28" width="167">
+				<components:MonthChooser id="dataDeposito" yearNavigationEnabled="true" styleName="monthChooserStyles" selectedDate="{chosenMonth}" change="updateDates()" height="28" width="167" showToday="false"/>
+			</mx:VBox>
+			<mx:TextInput x="10" y="88" width="60" id="mesReferencia" enabled="true" focusEnabled="true" editable="false" backgroundColor="#EDEEF7"/>
+			<mx:Label x="78" y="62" text="Nº Exames"/>
+			<mx:TextInput x="78" y="88" width="72" id="totalProcedimentos" enabled="true" restrict="0-9" change="{atualizaTotalExames(); validate(validadorTotalProcedimentos)}" focusEnabled="true"/>
+			<mx:Label x="10" y="0" text="Convênio"/>
+			<mx:Label x="383" y="0" text="Data Dep."/>
+			<mx:Label x="10" y="62" text="Mês Ref." width="58"/>
+			<mx:Label x="181" y="62" text="Alíq. IR(%):"/>
+			<mx:Label x="278" y="62" text="Dedução IR (R$):"/>
+			<mx:TextInput x="181" y="88" width="72" id="aliquotaIR" maxChars="6" change="{calculaValorIR()}" focusIn="selecionaTexto(aliquotaIR)" focusOut="formataMoeda(aliquotaIR)" text="0,00" focusEnabled="true"/>
+			<mx:TextInput x="278" y="88" width="72" id="deducaoIR" maxChars="10" change="{calculaValorIR()}" focusIn="selecionaTexto(deducaoIR)" focusOut="formataMoeda(deducaoIR)" text="0,00" focusEnabled="true"/>
+			<mx:TextInput x="78" y="146" width="72" id="valorExames" maxChars="10" change="{calculaTotalCreditos();validate(validadorValorExames)}" focusIn="selecionaTexto(valorExames)" focusOut="formataMoeda(valorExames)" text="0,00" focusEnabled="true"/>
+			<mx:Label x="181" y="120" text="Materiais (R$):"/>
+			<mx:TextInput x="181" y="146" width="72" id="valorMateriais" maxChars="10" change="{calculaTotalCreditos()}" focusIn="selecionaTexto(valorMateriais)" focusOut="formataMoeda(valorMateriais)" text="0,00" focusEnabled="true"/>
+			<mx:Label x="386" y="120" text="Filmes (R$):"/>
+			<mx:TextInput x="278" y="146" width="72" id="valorMedicamentos" maxChars="10" change="{calculaTotalCreditos()}" focusIn="selecionaTexto(valorMedicamentos)" focusOut="formataMoeda(valorMedicamentos)" text="0,00" focusEnabled="true"/>
+			<mx:TextInput x="386" y="146" width="72" id="valorFilmes" maxChars="10" change="{calculaTotalCreditos()}" focusIn="selecionaTexto(valorFilmes)" focusOut="formataMoeda(valorFilmes)" text="0,00" focusEnabled="true"/>
+			<mx:Label x="278" y="120" text="Medicam. (R$):"/>
+			<mx:Label x="78" y="120" text="Exames (R$):"/>
+			<mx:Label x="10" y="118" text="Créditos" fontSize="12" fontWeight="bold"/>
+			<mx:Label x="78" y="178" text="IR (R$):"/>
+			<mx:TextInput x="181" y="204" width="72" id="inss" maxChars="9" change="{calculaValorIR()}" focusIn="selecionaTexto(inss)" focusOut="formataMoeda(inss)" text="0,00" focusEnabled="true"/>
+			<mx:TextInput x="278" y="204" width="72" id="pagPart" maxChars="9" change="{calculaTotalDebitos()}" focusIn="selecionaTexto(pagPart)" focusOut="formataMoeda(pagPart)" text="0,00" focusEnabled="true"/>
+			<mx:TextInput x="386" y="204" width="72" id="outrasDespesas" maxChars="9" change="{calculaTotalDebitos()}" focusIn="selecionaTexto(outrasDespesas)" focusOut="formataMoeda(outrasDespesas)" text="0,00" focusEnabled="true"/>
+			<mx:TextInput x="78" y="204" width="72" id="ir" maxChars="9" change="{calculaTotalDebitos()}" text="0,00" editable="false" focusEnabled="false" backgroundColor="#EDEEF7" borderColor="#B7BABC"/>
+			<mx:Label x="181" y="178" text="INSS (R$):"/>
+			<mx:Label x="386" y="178" text="Outras Desp. (R$):"/>
+			<mx:Label x="278" y="178" text="Pag. Part. (R$):"/>
+			<mx:Label x="10" y="176" text="Débitos" fontSize="12" fontWeight="bold"/>
+			<mx:Label x="10" y="234" text="Totais" fontSize="12" fontWeight="bold"/>
+			<mx:Label x="78" y="236" text="Créditos (R$):"/>
+			<mx:TextInput x="78" y="262" width="72" id="totalCreditos" maxChars="10" text="0,00" editable="false" focusEnabled="false" backgroundColor="#EDEEF7" borderColor="#B7BABC"/>
+			<mx:Label x="181" y="236" text="Débitos (R$):"/>
+			<mx:TextInput x="181" y="262" width="72" id="totalDebitos" maxChars="10" text="0,00" editable="false" focusEnabled="false" backgroundColor="#EDEEF7" borderColor="#B7BABC"/>
+			<mx:Label x="278" y="236" text="Valor Creditado (R$):"/>
+			<mx:TextInput x="278" y="262" width="72" id="valorCreditado" maxChars="10" editable="false" text="0,00" focusEnabled="false" backgroundColor="#EDEEF7" borderColor="#B7BABC"/>
+		</mx:Canvas>
+		<mx:Canvas label="Departamentos" width="100%" height="100%">
+			<mx:Panel id="pdg" x="10" y="112" layout="absolute" title="Departamentos Beneficiados" height="142" width="540">
+				<mx:DataGrid id="dg" dataProvider="{receitasCollection}" x="0" y="0" width="100%" height="100%">
+					<mx:columns>
+						<mx:DataGridColumn headerText="Departamento" dataField="recDepartamento" labelFunction="propChainLabelFunction" width="100"/>
+						<mx:DataGridColumn headerText="Valor" dataField="recValorBruto" width="40"/>
+						<mx:DataGridColumn headerText="Nº Exames" dataField="recQuantidadeExames" width="40"/>								
+					</mx:columns>
+				</mx:DataGrid>
+			</mx:Panel>
+			<mx:Panel x="357" y="10" width="193" height="94" layout="absolute" title="Restantes à Alocar">
+				<mx:TextInput x="10" y="27" width="72" id="restantesReceitas" maxChars="10" editable="false" text="0,00" focusEnabled="false"/>
+				<mx:TextInput x="93" y="27" width="72" id="restantesExames" maxChars="10" restrict="0-9" editable="false" text="0" focusEnabled="false"/>
+				<mx:Label x="10" y="7" text="Receitas" fontSize="10" fontWeight="bold"/>
+				<mx:Label x="93" y="7" text="Exames" fontSize="10" fontWeight="bold"/>
+			</mx:Panel>
+			<mx:ComboBox dataProvider="{departamentos}" x="110" y="10" width="239" id="departamentosCombo" enabled="false" labelField="depNome" change="validate(validadorDepartamentosCombo)">
+			</mx:ComboBox>
+			<mx:TextInput x="109" y="40" width="89" id="valor" focusIn="selecionaTexto(valor)" focusOut="formataMoeda(valor)"  maxChars="10" text="0,00" change="validate(validadorValor)" enabled="false"/>
+			<mx:TextInput x="110" y="68" width="79" id="exames" maxChars="6" restrict="0-9" change="validate(validadorExames)" enabled="false"/>
+			<mx:Label x="7" y="12" text="Departamentos"/>
+			<mx:Label x="4" y="42" text="Valor Bruto (R$)"/>
+			<mx:Label x="35" y="70" text="Nº exames"/>
+			<mx:Button label="Alterar" id="btnAlterar" icon="@Embed(source='../images/alter.png')" click="{alterar()}" x="28" y="262"/>
+			<mx:Button label="Adcionar" id="btnNovo" icon="@Embed(source='../images/add.png')" click="{criaNovo()}" x="125" y="262"/>
+			<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')" x="432" y="262"/>
+			<mx:Button label="Cancelar" id="btnCancelar" click="{cancelaOper()}" icon="@Embed(source='../images/cancel.png')" x="324" y="262" enabled="false"/>
+			<mx:Button label="Salvar" enabled="false" id="btnSalvarDepartamento" icon="@Embed('../images/ok.png')" click="{salvarDepartamento()}" x="232" y="262"/>
+		</mx:Canvas>
+		<mx:Canvas label="Resumo" width="100%" height="100%">
+			<mx:Panel x="211" y="10" width="339" height="102" layout="absolute" title="Totais" id="painel">
+				<mx:TextInput id="inputMin" text="1" visible="false"/>
+			    <mx:TextInput id="inputMax" text="999999" visible="false"/>
+			    <mx:Label x="6.5" y="4" text="Créditos (R$):"/>
+			    <mx:TextInput x="6.5" y="30" width="72" id="totalCreditosResumo" maxChars="10" text="0,00" editable="false" focusEnabled="false" backgroundColor="#EDEEF7" borderColor="#B7BABC"/>
+			    <mx:Label x="98.5" y="4" text="Débitos (R$):"/>
+			    <mx:TextInput x="98.5" y="30" width="72" id="totalDebitosResumo" maxChars="10" text="0,00" editable="false" focusEnabled="false" backgroundColor="#EDEEF7" borderColor="#B7BABC"/>
+			    <mx:Label x="187.5" y="4" text="Valor Creditado (R$):"/>
+			    <mx:TextInput x="187.5" y="30" width="72" id="valorCreditadoResumo" maxChars="10" editable="false" text="0,00" focusEnabled="false" backgroundColor="#EDEEF7" borderColor="#B7BABC"/>
+				
+			</mx:Panel>
+			<mx:Panel id="pdg0" x="10" y="129" layout="absolute" title="Departamentos Beneficiados" height="155" width="540">
+				<mx:DataGrid id="dg0" dataProvider="{receitasCollection}" x="0" y="0" width="100%" height="100%">
+					<mx:columns>
+						<mx:DataGridColumn headerText="Departamento" dataField="recDepartamento" labelFunction="propChainLabelFunction" width="100"/>
+						<mx:DataGridColumn headerText="Valor" dataField="recValorBruto" width="40"/>
+						<mx:DataGridColumn headerText="Nº Exames" dataField="recQuantidadeExames" width="40"/>								
+					</mx:columns>
+				</mx:DataGrid>
+			</mx:Panel>
+			<mx:Label x="11" y="55" text="Data Dep."/>
+			<mx:VBox x="11" y="81"  height="28" width="167">
+				<components:MonthChooser id="dataDepositoResumo" yearNavigationEnabled="true" styleName="monthChooserStyles" selectedDate="{chosenMonth}" change="updateDates()" height="28" width="167" showToday="false"/>
+			</mx:VBox>
+			<mx:Label x="114" y="33" width="64" id="mesReferenciaResumo"/>
+			<mx:Label x="10" y="10" width="193" fontSize="11" fontWeight="bold" id="convenioResumo"/>
+			<mx:Label x="11" y="33" text="Mês Referência: "/>
+		</mx:Canvas>
+	</mx:TabNavigator>
+	<mx:Button label="Próximo" id="btnProximo" icon="@Embed(source='../images/resultset_next.png')" click="{proximaAba()}" x="460" y="335"/>
+	<mx:Button label="Anterior" id="btnAnterior" icon="@Embed(source='../images/resultset_previous.png')" click="{abaAnterior()}" x="353" y="335" enabled="false"/>
+	<mx:ControlBar height="55">
+		<mx:Button label="Salvar" enabled="true" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarReceitas()}"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{fechar()}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

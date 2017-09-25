@@ -1,0 +1,472 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application backgroundImage="@Embed(source='images/plano_fundo.jpg')" creationComplete="{fazerLogin()}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute"
+	preloader="DownloadProgressBarBR"
+	xmlns:util="components.*"
+	 horizontalAlign="center" verticalAlign="middle" scroll="true">
+	 
+	<mx:Script>
+	<![CDATA[
+		import mx.collections.ArrayCollection;
+		import mx.rpc.events.ResultEvent;
+		import flash.display.StageDisplayState;
+        
+		[Bindable]
+		public var rCodCli : String;
+		[Bindable]
+		public var rNomCli : String;
+
+		[Bindable]
+		public var rCodCli1 : String;
+		[Bindable]
+		public var rNomCli1 : String;
+
+		[Bindable]
+		public var rCodQua : String;
+		[Bindable]
+		public var rNomQua : String;
+		[Bindable]
+		public var hora : String;
+		
+		[Bindable]
+		//public var Servidor : String = "www.flexdev.com.br";
+		public var Servidor : String = "localhost:8080";
+
+		public function iconMoveDown(id:Image):void{
+			id.x = id.x+2;
+			id.y = id.y+2;
+		}
+	
+		public function iconMoveUp(id:Image):void{
+			id.x = id.x-2;
+			id.y = id.y-2;
+		}
+
+		public function iconMD(id:Image):void{
+			id.y = id.y+2;
+		}
+
+		public function iconMU(id:Image):void{
+			id.y = id.y-2;
+		}
+	]]>
+</mx:Script>
+	<mx:Script>
+		<![CDATA[
+			import components.consultaRelatoriosSocias;
+			import components.retirada;
+			import components.aplicacoes;
+			import components.auditoriaDespesa;
+			import components.auditoriaReceitaPorVencimento;
+			import components.consultaDespesasPorSocio;
+			import entity.Vencimento;
+			import components.consultaReceitasPorVencimento;
+			import components.consultaReceitasPorDepartamento;
+			import components.consultaDespesasPorDepartamento;
+			import entity.DespesaPorVencimento;
+			import components.consultaDespesas;
+			import components.cadastroDepartamentoSocio;
+			import components.cadastroDepartamentoDepartamento;
+			import components.fechamentoMes;
+			import components.relatorioResumoVencimento;
+			import entity.Usuario;
+			import entity.ReceitaPorConvenio;
+			import components.receitaPorVencimento;
+			import entity.CategoriaDespesa;
+			import mx.managers.PopUpManager;
+			import mx.events.CloseEvent;
+			import components.receitaPorVencimento;
+			import components.receitas;		
+			import components.login;
+			import components.usuarios;
+			import components.socios;
+			import components.departamento;
+			import components.contaPagamento;
+			import components.convenios;
+			import components.categoriaDespesa;
+			import components.despesa;
+			import components.despesaPorVencimento;
+			import components.despesaExtra;
+			import mx.effects.easing.Bounce;
+			import mx.effects.Move;
+			import flash.utils.Timer;
+		    import flash.events.TimerEvent;
+		    import flash.display.Sprite;
+		    import mx.controls.Alert;
+			
+			private var timer:Timer = null;
+			private var usuario:Usuario;
+			
+			public function fazerLogin():void{
+				initTimer();
+				var logar : login = login(PopUpManager.createPopUp(this, components.login , true));
+				logar.usuario.setFocus();
+				PopUpManager.centerPopUp(logar) ;
+				loginEffect.target=logar;
+				loginEffect.play();
+			}
+			
+			public function setUsuario(usu:Usuario):void { 
+				this.usuario = usu;
+				usuarioLogado.text = usuario.usuLogin;
+			}
+			
+			public function isAdministrador():Boolean {
+				return (usuario != null) ? (usuario.usuNivel == "Administrador") : false; 
+			}
+			
+			public function isViewer():Boolean {
+				return (usuario != null) ? (usuario.usuNivel == "Administrador" || usuario.usuNivel == "Sócia") : false; 
+			}
+			
+			public function abrirUsuarios():void{
+				initTimer();
+				var usuariosPopUp : usuarios = usuarios(PopUpManager.createPopUp(this, components.usuarios , true));
+				PopUpManager.centerPopUp(usuariosPopUp) ;
+				loginEffect.target=usuariosPopUp;
+				loginEffect.play();
+			}
+			public function abrirAplicacoes():void{
+				initTimer();
+				var aplicacoesPopUp : aplicacoes = aplicacoes(PopUpManager.createPopUp(this, components.aplicacoes , true));
+				PopUpManager.centerPopUp(aplicacoesPopUp) ;
+				loginEffect.target=aplicacoesPopUp;
+				loginEffect.play();
+			}
+			public function abrirRetiradas():void{
+				initTimer();
+				var retiradaPopUp : retirada = retirada(PopUpManager.createPopUp(this, components.retirada , true));
+				PopUpManager.centerPopUp(retiradaPopUp) ;
+				loginEffect.target=retiradaPopUp;
+				loginEffect.play();
+			}
+			public function abrirSocios():void{
+				initTimer();
+				var sociosPopUp : socios = socios(PopUpManager.createPopUp(this, components.socios , true));
+				PopUpManager.centerPopUp(sociosPopUp);				
+				loginEffect.target=sociosPopUp;
+				loginEffect.play();
+			}
+			public function abrirDepartamentos():void{
+				initTimer();
+				var departamentosPopUp : departamento = departamento(PopUpManager.createPopUp(this, components.departamento , true));
+				PopUpManager.centerPopUp(departamentosPopUp) ;
+				loginEffect.target=departamentosPopUp;
+				loginEffect.play();
+			}
+			public function abrirContas():void{
+				initTimer();
+				var contaPagamentoPopUp : contaPagamento = contaPagamento(PopUpManager.createPopUp(this, components.contaPagamento , true));
+				PopUpManager.centerPopUp(contaPagamentoPopUp) ;
+				loginEffect.target=contaPagamentoPopUp;
+				loginEffect.play();
+			}
+			public function abrirConvenios():void{
+				initTimer();
+				var conveniosPopUp : convenios = convenios(PopUpManager.createPopUp(this, components.convenios , true));
+				PopUpManager.centerPopUp(conveniosPopUp) ;
+				loginEffect.target=conveniosPopUp;
+				loginEffect.play();
+			}
+			public function abrirDespesa():void{
+				initTimer();
+				var despesaPopUp : despesa = despesa(PopUpManager.createPopUp(this, components.despesa, true));
+				PopUpManager.centerPopUp(despesaPopUp) ;
+				loginEffect.target=despesaPopUp;
+				loginEffect.play();
+			}
+			public function abrirDespesaPorVencimento():void{
+				initTimer();
+				var despesaPopUp : despesaPorVencimento = despesaPorVencimento(PopUpManager.createPopUp(this, components.despesaPorVencimento, true));
+				PopUpManager.centerPopUp(despesaPopUp) ;
+				loginEffect.target=despesaPopUp;
+				loginEffect.play();
+			}
+			
+			public function abrirReceita():void{
+				initTimer();
+				var receitaPopUp : receitaPorVencimento = receitaPorVencimento(PopUpManager.createPopUp(this, components.receitaPorVencimento, true));
+				PopUpManager.centerPopUp(receitaPopUp) ;
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}
+			
+			public function abrirResumoVencimento():void{
+				initTimer();
+				var receitaPopUp : relatorioResumoVencimento = relatorioResumoVencimento(PopUpManager.createPopUp(this, components.relatorioResumoVencimento, true));
+				PopUpManager.centerPopUp(receitaPopUp) ;
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}
+			
+			public function abrirReceitaPorConvenio(jrpv:receitaPorVencimento):void {
+				var receitaPopUp : receitas = receitas(PopUpManager.createPopUp(this, components.receitas, true));
+				receitaPopUp.setJanelaReceitaPorVencimento(jrpv);
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}
+			
+			public function abrirReceitaPorConvenioAuditoria(jrpv:auditoriaReceitaPorVencimento, v:Vencimento):void {
+				var receitaPopUp : receitas = receitas(PopUpManager.createPopUp(this, components.receitas, true));
+				receitaPopUp.setJanelaAuditoriaReceitaPorVencimento(jrpv);
+				receitaPopUp.setVencimentoAtual(v);
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}
+			
+			public function abrirFechamentoMes(jrv:relatorioResumoVencimento):void {
+				var receitaPopUp : fechamentoMes = fechamentoMes(PopUpManager.createPopUp(this, components.fechamentoMes, true));
+				receitaPopUp.setRrv(jrv);
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}
+			
+			public function abrirReceitaPorConvenioAlteracao(jrpv:receitaPorVencimento, rc:ReceitaPorConvenio):void {
+				var receitaPopUp : receitas = receitas(PopUpManager.createPopUp(this, components.receitas, true));
+				PopUpManager.centerPopUp(receitaPopUp);
+				receitaPopUp.setJanelaReceitaPorVencimento(jrpv);
+				loginEffect.target=receitaPopUp;
+				receitaPopUp.setReceitaConvenio(rc);
+				loginEffect.play();
+			}			
+			
+			public function abrirReceitaPorConvenioAuditoriaAlteracao(jrpv:auditoriaReceitaPorVencimento, rc:ReceitaPorConvenio):void {
+				var receitaPopUp : receitas = receitas(PopUpManager.createPopUp(this, components.receitas, true));
+				PopUpManager.centerPopUp(receitaPopUp);
+				receitaPopUp.setJanelaAuditoriaReceitaPorVencimento(jrpv);
+				loginEffect.target=receitaPopUp;
+				receitaPopUp.setReceitaConvenio(rc);
+				loginEffect.play();
+			}			
+			
+			public function abrirDepartamentoDepartamento(janela:departamento):void {
+				var receitaPopUp : cadastroDepartamentoDepartamento = cadastroDepartamentoDepartamento(PopUpManager.createPopUp(this, components.cadastroDepartamentoDepartamento, true));
+				receitaPopUp.setJanelaDepartamento(janela);
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}			
+			
+			public function abrirDepartamentoSocio(janela:departamento):void {
+				var receitaPopUp : cadastroDepartamentoSocio = cadastroDepartamentoSocio(PopUpManager.createPopUp(this, components.cadastroDepartamentoSocio, true));
+				receitaPopUp.setJanelaDepartamento(janela);
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}				
+			
+			public function abrirAuditoriaDespesas():void {
+				var receitaPopUp : auditoriaDespesa = auditoriaDespesa(PopUpManager.createPopUp(this, components.auditoriaDespesa, true));
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}			
+			
+			public function abrirAuditoriaReceitas():void {
+				var receitaPopUp : auditoriaReceitaPorVencimento = auditoriaReceitaPorVencimento(PopUpManager.createPopUp(this, components.auditoriaReceitaPorVencimento, true));
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}			
+			
+			public function abrirRelatorioPorCriterioDespesas():void {
+				var receitaPopUp : consultaDespesas = consultaDespesas(PopUpManager.createPopUp(this, components.consultaDespesas, true));
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}			
+			
+			public function abrirRelatorioPorCriterioReceitas():void {
+				//var receitaPopUp : consultaReceitasPorVencimento = consultaReceitasPorVencimento(PopUpManager.createPopUp(this, components.consultaReceitasPorVencimento, true));
+				var receitaPopUp : consultaReceitasPorDepartamento = consultaReceitasPorDepartamento(PopUpManager.createPopUp(this, components.consultaReceitasPorDepartamento, true));
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}			
+			
+			public function abrirRelatorioPorCriterioSocios():void {
+				var receitaPopUp : consultaRelatoriosSocias = consultaRelatoriosSocias(PopUpManager.createPopUp(this, components.consultaRelatoriosSocias, true));
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}			
+			
+			public function abrirRelatorioDespesasPorDepartamento():void {
+				var receitaPopUp : consultaDespesasPorDepartamento = consultaDespesasPorDepartamento(PopUpManager.createPopUp(this, components.consultaDespesasPorDepartamento, true));
+				PopUpManager.centerPopUp(receitaPopUp);				
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}			
+			
+			public function abrirRelatorioDespesasPorSocio():void {
+				var receitaPopUp : consultaDespesasPorSocio = consultaDespesasPorSocio(PopUpManager.createPopUp(this, components.consultaDespesasPorSocio, true));
+				PopUpManager.centerPopUp(receitaPopUp);				
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}			
+			
+			public function abrirRelatorioReceitasPorDepartamento():void {
+				var receitaPopUp : consultaReceitasPorDepartamento = consultaReceitasPorDepartamento(PopUpManager.createPopUp(this, components.consultaReceitasPorDepartamento, true));
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}			
+			
+			public function abrirCategoriaDespesa():void{
+				initTimer();
+				var cdPopUp : categoriaDespesa = categoriaDespesa(PopUpManager.createPopUp(this, components.categoriaDespesa , true));
+				PopUpManager.centerPopUp(cdPopUp);
+				loginEffect.target=cdPopUp;
+				loginEffect.play();
+			}
+			public function abreHelp():void{
+				navigateToURL(new URLRequest("help.html"), "_blank");
+			}
+			public function sair():void{
+				usuarioLogado.text = "";
+				fazerLogin();
+			}
+			public function Data():void{
+				df.format( new Date().getTime() );
+			}
+			public function initTimer():void{
+				this.timer = new Timer( 1000 * 1 );
+				timer.addEventListener("timer", incrementa);
+				timer.start();
+			}
+			public function incrementa(event:TimerEvent):void{
+				hora = hf.format( new Date() );
+			}
+		]]>
+	</mx:Script>
+	<mx:Image x="10" y="116" id="iconeusuarios" click="{abrirUsuarios()}" toolTip="Gerenciamento de Usuários"
+		mouseOver="{iconMoveDown(iconeusuarios)}" 
+		mouseOut="{iconMoveUp(iconeusuarios)}"
+		mouseDown="{iconMD(iconeusuarios)}" 
+		mouseUp="{iconMU(iconeusuarios)}" source="images/usuarios.swf" width="125" height="125" alpha="1.0"/>
+		
+<mx:DateFormatter id="df" formatString="DD/MM/YYYY"/>
+<mx:DateFormatter id="hf" formatString="JJ:NN:SS"/>
+<mx:Parallel id="loginEffect">
+<mx:Fade alphaFrom="0" alphaTo="1"/>
+<mx:WipeDown moveEasingFunction="Bounce.easeOut" duration="800"/>
+<mx:Sequence>
+    <mx:Blur duration="300" blurYFrom="1.0" blurYTo="20.0" />            
+    <mx:Blur duration="300" blurYFrom="20.0" blurYTo="1" />            
+</mx:Sequence>
+</mx:Parallel>
+
+	<mx:ApplicationControlBar x="10" y="23" width="1072">
+		<mx:Label text="ACM - Assessoria em Contas Médicas" fontSize="15" fontWeight="bold" width="100%" color="#000000"/>
+		<mx:Label text="Usuário Logado" fontWeight="bold"/>
+		<mx:Label text="User" id="usuarioLogado"/>
+		<mx:Label text="Data do Sistema" fontWeight="bold"/>
+		<mx:Label text="{ df.format( new Date() ) }"/>
+		<mx:Label text="Hora do Sistema" fontWeight="bold"/>
+		<mx:Label id="txthora" text="{ hora }"/>
+		<mx:Button label="Log Out" labelPlacement="right" icon="@Embed(source='images/fechar.png')" enabled="true" id="botaoSair" click="{sair()}" borderColor="#3B6F93" themeColor="#317FB1" fillAlphas="[1.0, 1.0]" fillColors="[#FFFFFF, #525ED7]"/>
+	</mx:ApplicationControlBar>
+	<mx:Image x="134" y="116" id="iconesocios" click="{abrirSocios()}" toolTip="Gerenciamento de Sócios"
+		mouseOver="{iconMoveDown(iconesocios)}" 
+		mouseOut="{iconMoveUp(iconesocios)}"
+		mouseDown="{iconMD(iconesocios)}" 
+		mouseUp="{iconMU(iconesocios)}" source="images/socios.swf" width="125" height="125"/>
+	<mx:Image x="258" y="116" id="iconeDepartamento" click="{abrirDepartamentos()}" toolTip="Gerenciamento de Departamentos"
+		mouseOver="{iconMoveDown(iconeDepartamento)}" 
+		mouseOut="{iconMoveUp(iconeDepartamento)}"
+		mouseDown="{iconMD(iconeDepartamento)}" 
+		mouseUp="{iconMU(iconeDepartamento)}" source="images/departamentos.swf" width="125" height="125"/>
+	<mx:Image x="10" y="240" id="iconeContas" click="{abrirContas()}" toolTip="Gerenciamento de Contas para Pagamento"
+		mouseOver="{iconMoveDown(iconeContas)}" 
+		mouseOut="{iconMoveUp(iconeContas)}"
+		mouseDown="{iconMD(iconeContas)}" 
+		mouseUp="{iconMU(iconeContas)}" source="images/contas.swf" width="125" height="125"/>
+	<mx:Image x="258" y="240" id="iconeCategoriaDespesa" click="{abrirCategoriaDespesa()}" toolTip="Gerenciamento de Categoria de Despesa"
+		mouseOver="{iconMoveDown(iconeCategoriaDespesa)}" 
+		mouseOut="{iconMoveUp(iconeCategoriaDespesa)}"
+		mouseDown="{iconMD(iconeCategoriaDespesa)}" 
+		mouseUp="{iconMU(iconeCategoriaDespesa)}" source="images/despesascategoria.swf" width="125" height="125"/>
+	<mx:Image x="10" y="364" id="iconeDespesa" click="{abrirDespesa()}" toolTip="Gerenciamento de  Despesa"
+		mouseOver="{iconMoveDown(iconeDespesa)}" 
+		mouseOut="{iconMoveUp(iconeDespesa)}"
+		mouseDown="{iconMD(iconeDespesa)}" 
+		mouseUp="{iconMU(iconeDespesa)}" source="images/despesas.swf" width="125" height="125"/>
+	<mx:Image x="134" y="364" id="iconeDespesaPorVencimento" click="{abrirDespesaPorVencimento()}" toolTip="Gerenciamento de Despesas por Vencimento"
+		mouseOver="{iconMoveDown(iconeDespesaPorVencimento)}" 
+		mouseOut="{iconMoveUp(iconeDespesaPorVencimento)}"
+		mouseDown="{iconMD(iconeDespesaPorVencimento)}" 
+		mouseUp="{iconMU(iconeDespesaPorVencimento)}" source="images/despesasporvencimento.swf" width="125" height="125"/>
+	<mx:Image x="258" y="364" id="iconeReceitas" toolTip="Gerenciamento de Receitas"
+		mouseOver="{iconMoveDown(iconeReceitas)}" 
+		mouseOut="{iconMoveUp(iconeReceitas)}"
+		mouseDown="{iconMD(iconeReceitas)}" 
+		mouseUp="{iconMU(iconeReceitas)}" source="images/receitas.swf" width="125" height="125" click="{abrirReceita()}"/>
+	<mx:Image x="451" y="116" id="iconeResumoVencimento" toolTip="Fechamento de Vencimento"
+		mouseOver="{iconMoveDown(iconeResumoVencimento)}" 
+		mouseOut="{iconMoveUp(iconeResumoVencimento)}"
+		mouseDown="{iconMD(iconeResumoVencimento)}" 
+		mouseUp="{iconMU(iconeResumoVencimento)}" source="images/fechamentomensal.swf" width="125" height="125" click="{abrirResumoVencimento()}"/>
+	<mx:Image x="451" y="240" id="iconeAplicacoes" toolTip="Aplicações"
+		mouseOver="{iconMoveDown(iconeAplicacoes)}" 
+		mouseOut="{iconMoveUp(iconeAplicacoes)}"
+		mouseDown="{iconMD(iconeAplicacoes)}" 
+		mouseUp="{iconMU(iconeAplicacoes)}" source="images/aplicacoes.swf" width="125" height="125" click="{abrirAplicacoes()}"/>
+	<mx:Image x="451" y="364" id="iconeRetiradas" toolTip="Retiradas"
+		mouseOver="{iconMoveDown(iconeRetiradas)}" 
+		mouseOut="{iconMoveUp(iconeRetiradas)}"
+		mouseDown="{iconMD(iconeRetiradas)}" 
+		mouseUp="{iconMU(iconeRetiradas)}" source="images/retiradas.swf" width="125" height="125" click="{abrirRetiradas()}"/>
+	<mx:Image x="641" y="240" id="iconeAuditoriaReceitas" toolTip="Auditoria de Receitas"
+		mouseOver="{iconMoveDown(iconeAuditoriaReceitas)}" 
+		mouseOut="{iconMoveUp(iconeAuditoriaReceitas)}"
+		mouseDown="{iconMD(iconeAuditoriaReceitas)}" 
+		mouseUp="{iconMU(iconeAuditoriaReceitas)}" source="images/audi_receitas.swf" width="125" height="125" click="{abrirAuditoriaReceitas()}" />
+	<mx:Image x="833" y="240" id="iconeRelatoriosReceitas" toolTip="Relatório de Receitas por Departamento"
+		mouseOver="{iconMoveDown(iconeRelatoriosReceitas)}" 
+		mouseOut="{iconMoveUp(iconeRelatoriosReceitas)}"
+		mouseDown="{iconMD(iconeRelatoriosReceitas)}" 
+		mouseUp="{iconMU(iconeRelatoriosReceitas)}" source="images/relatorio_receitas.swf" width="125" height="125" click="{abrirRelatorioPorCriterioReceitas()}"/>
+	<mx:Image x="957" y="240" id="iconeRelatoriosSocio" toolTip="Relatório de Receitas por Sócios"
+		mouseOver="{iconMoveDown(iconeRelatoriosSocio)}" 
+		mouseOut="{iconMoveUp(iconeRelatoriosSocio)}"
+		mouseDown="{iconMD(iconeRelatoriosSocio)}" 
+		mouseUp="{iconMU(iconeRelatoriosSocio)}" source="images/relatorio_financeirosocio.swf" width="125" height="125" click="{abrirRelatorioPorCriterioSocios()}"/>
+	<mx:Image x="852" y="440" id="iconeRelatoriosReceitasPorDepartamento" toolTip="Relatório de Receitas por Departamento"
+		mouseOver="{iconMoveDown(iconeRelatoriosReceitasPorDepartamento)}" 
+		mouseOut="{iconMoveUp(iconeRelatoriosReceitasPorDepartamento)}"
+		mouseDown="{iconMD(iconeRelatoriosReceitasPorDepartamento)}" 
+		mouseUp="{iconMU(iconeRelatoriosReceitasPorDepartamento)}" source="images/RelatoriosReceitasPorDepartamento.png" width="68" height="72" click="{abrirRelatorioReceitasPorDepartamento()}" enabled="false" visible="false"/>
+	<mx:Image x="957" y="116" id="iconeRelatoriosPorCriterioDespesa" toolTip="Relatório de Despesas por Departamento"
+		mouseOver="{iconMoveDown(iconeRelatoriosPorCriterioDespesa)}" 
+		mouseOut="{iconMoveUp(iconeRelatoriosPorCriterioDespesa)}"
+		mouseDown="{iconMD(iconeRelatoriosPorCriterioDespesa)}" 
+		mouseUp="{iconMU(iconeRelatoriosPorCriterioDespesa)}" source="images/relatorio_despesaspordepartamento.swf" width="125" height="125" click="{abrirRelatorioDespesasPorDepartamento()}"/>
+	<mx:Image x="687" y="445" id="iconeRelatoriosPorCriterioDespesa0" toolTip="Relatório de Despesas por Departamento"
+		mouseOver="{iconMoveDown(iconeRelatoriosPorCriterioDespesa0)}" 
+		mouseOut="{iconMoveUp(iconeRelatoriosPorCriterioDespesa0)}"
+		mouseDown="{iconMD(iconeRelatoriosPorCriterioDespesa0)}" 
+		mouseUp="{iconMU(iconeRelatoriosPorCriterioDespesa0)}" source="images/RelatoriosDespesasPorDepartamento.png" width="68" height="72" click="{abrirRelatorioDespesasPorSocio()}" visible="false"/>
+	<mx:Image x="641" y="116" id="iconeAuditoriaDespesas" toolTip="Auditoria de Despesa"
+		mouseOver="{iconMoveDown(iconeAuditoriaDespesas)}" 
+		mouseOut="{iconMoveUp(iconeAuditoriaDespesas)}"
+		mouseDown="{iconMD(iconeAuditoriaDespesas)}" 
+		mouseUp="{iconMU(iconeAuditoriaDespesas)}" source="images/audi_despesasporvencimento.swf" width="125" height="125" click="{abrirAuditoriaDespesas()}"/>
+	<mx:Image x="833" y="116" id="iconeRelatoriosDespesas" toolTip="Relatório de Despesa"
+		mouseOver="{iconMoveDown(iconeRelatoriosDespesas)}" 
+		mouseOut="{iconMoveUp(iconeRelatoriosDespesas)}"
+		mouseDown="{iconMD(iconeRelatoriosDespesas)}" 
+		mouseUp="{iconMU(iconeRelatoriosDespesas)}" source="images/relatorio_despesas.swf" width="125" height="125" click="{abrirRelatorioPorCriterioDespesas()}"/>
+	<mx:Image x="134" y="240" id="iconePlano" click="{abrirConvenios()}" toolTip="Gerenciamento de Convênios"
+		mouseOver="{iconMoveDown(iconePlano)}" 
+		mouseOut="{iconMoveUp(iconePlano)}"
+		mouseDown="{iconMD(iconePlano)}" 
+		mouseUp="{iconMU(iconePlano)}" source="images/convenios.swf" width="125" height="125"/>
+	<mx:Label x="669" y="87" text="Auditoria" width="117" height="33" fontSize="14" color="#3C4159" fontWeight="bold"/>
+	<mx:Label x="861" y="87" text="Relatórios" width="100" height="33" fontSize="14" color="#3C4159" fontWeight="bold"/>
+	<mx:Label x="479" y="87" text="Administrativo" width="122" height="33" fontSize="14" color="#3C4159" fontWeight="bold"/>
+	<mx:Label x="38" y="87" text="Cadastros" width="102" height="33" fontSize="14" color="#3C4159" fontWeight="bold"/>
+	
+</mx:Application>

@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="absolute" title="Despesas do Sistema" width="762" height="370" 
+	xmlns:control="br.com.thinklab.util.control.*">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import entity.Despesa;
+			import entity.CategoriaDespesa;
+			import entity.Departamento;
+			import entity.Vencimento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			//import components.DecimalInput;
+            
+			[Bindable]
+			public var despesas:ArrayCollection; 
+            [Bindable]
+			public var categorias:ArrayCollection;
+            [Bindable]
+			public var departamentos:ArrayCollection;
+            public var idSelecionado: int = 0;
+            private var estaAdicionando:Boolean;
+             
+            
+
+			public function init():void{
+				habilitaValidadores(false);
+				estaAdicionando = false;
+				listaCategorias();				
+				listaDepartamentos();
+				listaDespesas();
+			}
+			
+			public function listaDespesas():void{
+				despesaService.getList();
+			}
+			
+			public function listaCategorias():void{
+				categoriaDespesaService.getList();				
+			}
+			
+			public function listaDepartamentos():void{
+				departamentoService.getList();				
+			}
+			
+			public function hrdpGrid(event:ResultEvent):void{
+				despesas = (ArrayCollection)(event.result);
+				despesas.sort = new Sort();
+                despesas.sort.fields = [new SortField("desNome", false, false)];
+                despesas.refresh();
+			}
+			
+			public function setCategoriasCombo(event:ResultEvent):void{
+				categorias = (ArrayCollection)(event.result);
+				categoriasCombo.dataProvider = categorias;
+				categorias.sort = new Sort();
+                categorias.sort.fields = [new SortField("cdNome", false, false)];
+                categorias.refresh();						
+			}
+			
+			public function setDepartamentosCombo(event:ResultEvent):void{
+				departamentos = (ArrayCollection)(event.result);
+				departamentosCombo.dataProvider = departamentos;	
+				departamentos.sort = new Sort();
+                departamentos.sort.fields = [new SortField("depNome", false, false)];
+                departamentos.refresh();							
+			}
+			
+			public function carregaDados():void{
+				if(despesas.length > 0) {
+					if(dg.selectedIndex < 0)
+						dg.selectedIndex = 0;
+					var i : int;
+					idSelecionado = dg.selectedItem.desId;
+					nome.text = dg.selectedItem.desNome;
+					extras.selected = dg.selectedItem.desEhExtra == "SIM" ? true : false;	
+					for ( i=0; i < categorias.length; i++){
+						var cp : CategoriaDespesa = (CategoriaDespesa) (dg.selectedItem.desCategoria);
+						var cp2 : CategoriaDespesa = (CategoriaDespesa) (categorias.getItemAt(i));
+						if (cp.cdId == cp2.cdId)
+							categoriasCombo.selectedIndex = i;
+					}			
+					for ( i=0; i < departamentos.length; i++){
+						var cp3 : Departamento = (Departamento) (dg.selectedItem.desDepartamento);
+						var cp4 : Departamento = (Departamento) (departamentos.getItemAt(i));
+						if (cp3.depId == cp4.depId)
+							departamentosCombo.selectedIndex = i;
+					}
+				}
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					habilitaValidadores(true);
+					habilitaEdic(true);
+					carregaDados();
+					habilitaAlter(true);
+					nome.setFocus();
+				}
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				nome.enabled = hab;
+				departamentosCombo.enabled = hab;				
+				categoriasCombo.enabled = hab;
+				extras.enabled = hab;
+			}
+			
+			public function cancelaOper():void{
+				limpaCampos();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				carregaDados();
+				habilitaValidadores(false);					
+			}
+			
+			public function criaNovo():void{
+				habilitaValidadores(true);
+				limpaCampos();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				nome.setFocus();				
+				estaAdicionando = true;
+			}
+			
+			public function limpaCampos():void{
+				idSelecionado = 0;
+				nome.text = "";
+				categoriasCombo.selectedIndex = -1;
+				departamentosCombo.selectedIndex = -1;
+				extras.selected = false; 
+				estaAdicionando = false;
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				btnNovo.enabled = !hab;
+				btnAlterar.enabled = !hab;
+				btnSalvar.enabled = hab;
+				btnCancelar.enabled = hab;
+				btnRemover.enabled = !hab;
+				btnFechar.enabled = !hab;
+				pdg.enabled = !hab;			
+			}
+			
+			public function habilitaValidadores(hab:Boolean):void{
+				validadorNome.enabled = hab;	
+				validadorCategoriasCombo.enabled = hab;
+				validadorDepartamentosCombo.enabled = hab;
+			}
+			
+			public function despesaGravado(event:ResultEvent):void{
+				/* habilitaValidadores(false);
+				limpaCampos();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				listaDespesas();
+				Alert.show( "Despesa salva com sucesso!" ); */
+				habilitaEdic(false);
+				habilitaAlter(false);
+			 	habilitaValidadores(false);
+				if(!estaAdicionando){ 
+					var des:Despesa = event.result as Despesa;
+					var desAntiga:Despesa = despesas.getItemAt(dg.selectedIndex) as Despesa;
+					desAntiga = des;
+					dg.setFocus();	
+					if(dg.selectedIndex < despesas.length)
+						dg.selectedIndex = dg.selectedIndex + 1;		
+					carregaDados();			
+				}
+				else {
+					despesas.addItem(event.result as Despesa);
+					estaAdicionando = false;
+				}
+				Alert.show( "Despesa salva com sucesso!");
+			}
+			
+			public function despesaRemovido(event:ResultEvent):void{
+				limpaCampos();
+				listaDespesas();
+				Alert.show( "Despesa removida com sucesso!" );				
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function getParameters():Despesa{
+				var des : Despesa = null;
+				if(!estaAdicionando){
+					des = (Despesa) (despesas.getItemAt(dg.selectedIndex));
+				}
+				else {
+					des = new Despesa();	
+				}
+				des.desId = idSelecionado;
+				des.desNome = nome.text;
+				des.desDepartamento = (Departamento) (departamentosCombo.selectedItem);
+				des.desCategoria = (CategoriaDespesa) (categoriasCombo.selectedItem);
+				des.desEhExtra = extras.selected == true ? "SIM" : "NAO";
+				return des;
+			}
+			
+			public function salvarDespesa():void{
+				 if (validar()){
+				 	if(Application.application.isAdministrador()) {
+						despesaService.save( this.getParameters());
+				 	}
+				 	else {
+				 		Alert.show("Você não possui permissão \npara salvar registros!");
+				 	}				 		
+				 }
+			}
+			
+			public function removerSelecionado():void{
+				Alert.yesLabel = "Sim";
+			  	Alert.noLabel = "Não";
+			  	Alert.show("Deseja remover esta Despesa?","Remover", Alert.YES | Alert.NO, this, confirmaRemocao);				 
+			}
+			
+			public function confirmaRemocao(event:CloseEvent):void{
+				if (event.detail==Alert.YES) {
+					if(dg.selectedIndex >= 0){
+						if(Application.application.isAdministrador()){
+							despesaService.remove( this.getParameters() );
+						}
+						else {
+							Alert.show("Você não possui permissão \npara remover este registro!");
+						}
+					}
+					else {
+				 		Alert.show("Selecione um Registro!");
+				 	}			
+				}
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.rootCause.localizedMessage, "OCORREU UM ERRO");
+			}
+			
+			public function validate(v:Validator):void{
+				v.validate();								
+			}
+			
+			public function upperCampo(campo : TextInput):void {
+				var comparador: String = "àãõâêôáéíóúç";
+				var texto: String = campo.text;
+				var posicao: int = campo.selectionBeginIndex - 1;
+				var caracter: String = texto.charAt(posicao);
+				
+				if (comparador.indexOf(caracter) != -1){
+					var strCampo: String = campo.text;
+					campo.text = strCampo.toUpperCase();
+					campo.selectionBeginIndex = posicao+1;
+					campo.selectionEndIndex = posicao+1;
+				}				
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Array id="validadores">
+		
+		<mx:StringValidator id="validadorNome" source="{nome}" minLength="2" required="true" property="text"
+			requiredFieldError="Nome não pode ser vazio." tooShortError="Nome deve ter no mínimo 2 caracteres."
+		/>
+		
+		<mx:NumberValidator id="validadorDepartamentosCombo" source="{departamentosCombo}" lowerThanMinError="Escolha um Departamento." 
+			property="selectedIndex" minValue="0" 
+		/>
+		
+		<mx:NumberValidator id="validadorCategoriasCombo" source="{categoriasCombo}" lowerThanMinError="Escolha uma Categoria de Despesas." 
+			property="selectedIndex" minValue="0" 
+		/>
+		
+	</mx:Array>
+	
+	<mx:RemoteObject id="despesaService" showBusyCursor="true"
+		fault="onFault(event)" destination="despesaService">
+		<mx:method name="save" fault="onFault(event)" result="despesaGravado(event)">
+			<mx:arguments>
+	            <commandArgs>{Despesa}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="remove" fault="onFault(event)" result="despesaRemovido(event)">
+			<mx:arguments>
+	            <commandArgs>{Despesa}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="getList" fault="onFault(event)" result="hrdpGrid(event)"/>
+            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="categoriaDespesaService" showBusyCursor="true"
+		fault="onFault(event)" destination="categoriaDespesaService">
+		<mx:method name="getList" fault="onFault(event)" result="setCategoriasCombo(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="departamentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="departamentoService">
+		<mx:method name="getList" fault="onFault(event)" result="setDepartamentosCombo(event)"/>            		
+	</mx:RemoteObject>
+	<mx:Label x="10" y="10" text="Nome"/>
+	<mx:Label x="363" y="38" text="Departamento"/>
+	<mx:TextInput x="55" y="8" width="511" id="nome" enabled="false" maxChars="40" restrict="[A-Z \- \\ ÀÃÕÂÊÔÁÉÍÓÚÇ àãõâêôáéíóúç 0-9]" change="validate(validadorNome); upperCampo(this.nome)"/>
+	<mx:ComboBox dataProvider="{categorias}" x="55" y="36" width="300" id="categoriasCombo" enabled="false" labelField="cdNome" change="validate(validadorCategoriasCombo)">
+	</mx:ComboBox>
+	<mx:ComboBox dataProvider="{departamentos}" x="456" y="36" width="272" id="departamentosCombo" enabled="false" labelField="depNome" change="validate(validadorDepartamentosCombo)">
+	</mx:ComboBox>
+	<mx:Label x="10" y="38" text="Categ."/>
+	<mx:Panel id="pdg" x="0" y="77" layout="absolute" title="Despesas Cadastradas" height="205" width="100%">
+		<mx:DataGrid id="dg" dataProvider="{despesas}" x="0" y="0" width="100%"
+			change="{carregaDados()}" height="100%" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Nome" dataField="desNome" width="80"/>
+				<mx:DataGridColumn headerText="Categoria" dataField="desCategoria" labelFunction="propChainLabelFunction" width="80"/>
+				<mx:DataGridColumn headerText="Departamento" dataField="desDepartamento" labelFunction="propChainLabelFunction" width="100"/>
+				<mx:DataGridColumn headerText="Extra" dataField="desEhExtra" width="20"/>																
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:CheckBox x="574" y="8" label="É Composta por Extras?" id="extras" enabled="false"/>
+	<mx:ControlBar height="56">
+		<mx:Button label="Button" width="58" visible="false"/>
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarDespesa()}"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')" click="{cancelaOper()}"/>
+		<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

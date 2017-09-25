@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Relatorio_Receita" pageWidth="555" pageHeight="802" columnWidth="555" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<property name="ireport.zoom" value="2.253944402704733"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<field name="departamento" class="java.lang.String">
+		<fieldDescription><![CDATA[recDepartamento.depNome]]></fieldDescription>
+	</field>
+	<field name="qtdeExames" class="java.lang.String">
+		<fieldDescription><![CDATA[recQuantidadeExames]]></fieldDescription>
+	</field>
+	<field name="valorBruto" class="java.lang.String">
+		<fieldDescription><![CDATA[recValorBruto]]></fieldDescription>
+	</field>
+	<field name="despesas" class="java.lang.String">
+		<fieldDescription><![CDATA[recValorDespesas]]></fieldDescription>
+	</field>
+	<field name="credito" class="java.lang.String">
+		<fieldDescription><![CDATA[recValorLiquido]]></fieldDescription>
+	</field>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="23" splitType="Stretch">
+			<line>
+				<reportElement key="line-6" x="476" y="0" width="1" height="22"/>
+			</line>
+			<staticText>
+				<reportElement key="staticText-38" x="391" y="4" width="19" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[R$]]></text>
+			</staticText>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-24" x="143" y="4" width="58" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{qtdeExames}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-22" x="414" y="4" width="49" height="16"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{credito}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement key="line-6" x="136" y="1" width="1" height="21"/>
+			</line>
+			<staticText>
+				<reportElement key="staticText-38" x="210" y="4" width="19" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[R$]]></text>
+			</staticText>
+			<line>
+				<reportElement key="line-5" x="7" y="1" width="1" height="21"/>
+			</line>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-22" x="317" y="4" width="60" height="16"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{despesas}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement key="line-3" x="7" y="0" width="469" height="1" forecolor="#000000"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="203" y="1" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="384" y="1" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-4" x="7" y="22" width="469" height="1" forecolor="#000000"/>
+			</line>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-25" x="13" y="4" width="114" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{departamento}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement key="line-6" x="293" y="1" width="1" height="21"/>
+			</line>
+			<staticText>
+				<reportElement key="staticText-38" x="300" y="4" width="19" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[R$]]></text>
+			</staticText>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-22" x="228" y="4" width="60" height="16"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{valorBruto}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

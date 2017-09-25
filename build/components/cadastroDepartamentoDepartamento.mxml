@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" 
+	close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" 
+	title="Departamentos Donos" width="620" height="322"
+	xmlns:control="br.com.thinklab.util.control.*" xmlns:components="components.*">
+	<mx:Script>
+		<![CDATA[
+			import entity.DepartamentoDepartamento;
+			import entity.Receita;
+			import entity.ReceitaPorConvenio;
+			import entity.Departamento;
+			import entity.Vencimento;
+			import components.departamento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			//import components.DecimalInput;
+			
+			private var vencimentoAtual: Vencimento;
+            
+			[Bindable]
+			public var ddCollection:ArrayCollection; 
+            [Bindable]
+			public var departamentos:ArrayCollection;
+            public var janelaDepartamento:departamento;           
+            public var estaAlterando:Boolean;  
+            
+
+			public function init():void {
+				habilitaValidadores(false);
+				estaAlterando = false;
+				habilitaEdic(false);
+				habilitaAlter(false);				
+				listaDepartamentos();	
+				if(this.ddCollection == null)
+					this.ddCollection = new ArrayCollection();  					
+			}
+			
+			public function setJanelaDepartamento(janela:departamento):void{
+				//Alert.show("setei janela");
+				this.janelaDepartamento = janela;
+				if(janelaDepartamento.getDDs() != null) {
+					this.ddCollection = janelaDepartamento.getDDs();
+					dg.dataProvider = this.ddCollection;					
+				}				  
+			}
+			
+			public function fecharJanela():void{
+				//Alert.show("tentei fechar");
+				PopUpManager.removePopUp(this);
+			}
+			public function listaDepartamentos():void{
+				departamentoService.getList();				
+			}
+			
+			public function setDepartamentosCombo(event:ResultEvent):void{
+				departamentos = (ArrayCollection)(event.result);
+				departamentosCombo.dataProvider = departamentos;						
+			}
+			
+			public function carregaDados():void{
+				if(ddCollection.length > 0) {
+					if(dg.selectedIndex < 0)
+						dg.selectedIndex = 0;
+					var i : int;
+					porcentagem.text = dg.selectedItem.ddPorcentagem;	
+					for ( i=0; i < departamentos.length; i++){
+						var cp3 : Departamento = (Departamento) (dg.selectedItem.ddDepartamentoDono);
+						var cp4 : Departamento = (Departamento) (departamentos.getItemAt(i));
+						if (cp3.depId == cp4.depId)
+							departamentosCombo.selectedIndex = i;
+					}
+				}
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					habilitaValidadores(true);
+					habilitaEdic(true);
+					carregaDados();
+					habilitaAlter(true);
+					departamentosCombo.setFocus();
+					estaAlterando = true;
+				}
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				departamentosCombo.enabled = hab;
+				porcentagem.enabled = hab;
+			}
+			
+			public function cancelaOper():void{
+				limpaCampos();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				carregaDados();
+				habilitaValidadores(false);				
+			}
+			
+			public function criaNovo():void{
+				habilitaValidadores(true);
+				limpaCampos();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				departamentosCombo.setFocus();
+			}
+			
+			public function limpaCampos():void{
+				departamentosCombo.selectedIndex = -1;
+				porcentagem.text = "0,00"; 
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				btnNovo.enabled = !hab;
+				btnAlterar.enabled = !hab;
+				btnSalvar.enabled = hab;
+				btnCancelar.enabled = hab;
+				btnRemover.enabled = !hab;
+				btnFechar.enabled = !hab;
+				pdg.enabled = !hab;			
+			}
+			
+			public function habilitaValidadores(hab:Boolean):void{
+				validadorDepartamentosCombo.enabled = hab;
+				validadorPorc.enabled = hab;	
+			}
+			
+			public function receitaGravado(event:ResultEvent):void{
+				Alert.show( "Receita salva com sucesso!");
+			}
+			
+			public function receitaRemovido(event:ResultEvent):void{
+				Alert.show( "Receita removida com sucesso!" );
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function getParameters():DepartamentoDepartamento{
+				var dd : DepartamentoDepartamento = new DepartamentoDepartamento();
+				dd.ddPorcentagem = porcentagem.text;
+				dd.ddDepartamentoDono = (Departamento) (departamentos.getItemAt(departamentosCombo.selectedIndex));
+				return dd;
+			}
+			
+			public function salvarDepartamento():void{
+				if (validar()) {
+					//TODO Verificar se está alterando
+					if(!estaAlterando) {
+						ddCollection.addItem( this.getParameters() );
+						Alert.show("Departamento adicionado com sucesso!");
+					}
+					else {
+						var dd : DepartamentoDepartamento = (DepartamentoDepartamento) (ddCollection.getItemAt(dg.selectedIndex));
+						dd.ddPorcentagem = porcentagem.text;
+						dd.ddDepartamentoDono = (Departamento) (departamentos.getItemAt(departamentosCombo.selectedIndex));
+						Alert.show("Departamento alterado com sucesso!");
+				 		estaAlterando = false;
+					}
+					habilitaEdic(false);
+					habilitaAlter(false);
+					habilitaValidadores(false);
+					limpaCampos();					
+				 }
+			}
+			
+			public function removerSelecionado():void{
+				 if (dg.selectedIndex >= 0) {
+					janelaDepartamento.addDDARemover((DepartamentoDepartamento)(ddCollection.removeItemAt(dg.selectedIndex)));
+					limpaCampos();
+				 }
+				 else {
+				 	Alert.show("Selecione um Registro!");
+				 }
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			public function validate(v:Validator):void{
+				v.validate();								
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.message);
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+
+			
+		]]>
+	</mx:Script>
+	
+	<mx:TextInput id="inputMin" text="1" visible="false"/>
+	<mx:TextInput id="inputMax" text="999999" visible="false"/>
+	
+	<mx:Array id="validadores">		
+		<components:MyNumberValidator source="{porcentagem}" id="validadorPorc" property="text" 
+			thousandsSeparator="." decimalSeparator=","
+			minValue="{Number(inputMin.text)}" maxValue="{Number(inputMax.text)}"
+			lowerThanMinError="O valor da porcentagem precisa ser informado."/>
+		
+		<mx:NumberValidator id="validadorDepartamentosCombo" source="{departamentosCombo}" lowerThanMinError="Escolha um Departamento." 
+			property="selectedIndex" minValue="0" 
+		/>		
+	</mx:Array>
+	
+	
+	<mx:RemoteObject id="departamentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="departamentoService">
+		<mx:method name="getList" fault="onFault(event)" result="setDepartamentosCombo(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:ComboBox dataProvider="{departamentos}" x="88" y="8" width="217" id="departamentosCombo" enabled="true" labelField="depNome" change="{validate(validadorDepartamentosCombo)}">
+	</mx:ComboBox>
+	<control:DecimalInput x="88" y="36" width="89" id="porcentagem" currencyFormat="br" maxChars="10" text="0,00" change="{validate(validadorPorc)}"/>
+	<mx:Label x="14" y="10" text="Departam."/>
+	<mx:Label x="45" y="38" text="Valor"/>
+	<mx:Panel id="pdg" x="0" y="68" layout="absolute" title="Departamentos Cadastradas" height="100%" width="100%">
+		<mx:DataGrid id="dg" dataProvider="{ddCollection}" x="0" y="0" width="100%"
+			change="{carregaDados()}" height="100%" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Departamento" dataField="ddDepartamentoDono" labelFunction="propChainLabelFunction" width="80"/>
+				<mx:DataGridColumn headerText="Porcentagem" dataField="ddPorcentagem" width="30"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ControlBar height="56">
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarDepartamento()}"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')" click="{cancelaOper()}"/>
+		<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{fecharJanela()}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

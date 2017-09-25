@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" title="Resumo do Mês" width="620" height="600" xmlns:control="br.com.thinklab.util.control.*">
+	<mx:Script>
+		<![CDATA[
+			import entity.ReceitaPorConvenio;
+			import entity.Receita;
+			import entity.Departamento;
+			import entity.Vencimento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;			
+			
+			public var vencimentoAtual: Vencimento;
+            
+			[Bindable]
+			public var receitasPorConvenio:ArrayCollection; 
+            [Bindable]
+			public var receitas:ArrayCollection; 
+            [Bindable]
+			public var despesas:ArrayCollection; 
+                         
+
+			public function init():void{
+				carregaVencimento();
+			}
+			
+			public function carregaVencimento():void{
+				vencimentoService.getVencimentoAtual();
+			}
+			
+			public function listaReceitas():void{
+				receitaPorConvenioService.getListPorVencimento(vencimentoAtual);
+			}
+			
+			public function listaDespesas():void{
+				despesaPorVencimentoService.getListPorVencimento(vencimentoAtual);
+			}
+			
+			public function hrdpGrid(event:ResultEvent):void{
+				receitasPorConvenio = (ArrayCollection)(event.result);
+			}
+			
+			public function carregaDespesas(event:ResultEvent):void{
+				despesas = (ArrayCollection)(event.result);
+				dg.dataProvider = despesas;
+				
+			}
+			
+			public function setVencimento(event:ResultEvent):void{
+				vencimentoAtual = (Vencimento)(event.result);
+				vencimento.text = vencimentoAtual.toString();
+				listaReceitas();	
+				listaDespesas();													
+			}
+			
+			public function alterar():void{
+				if ( trpc.selectedIndex == -1)
+					Alert.show("Selecione um Convênio!");
+				else {
+					Application.application.abrirReceitaPorConvenioAlteracao(this,(ReceitaPorConvenio)(trpc.selectedItem));				
+				}
+				
+			}			
+			public function finalizaVencimento():void{
+				Application.application.abrirFechamentoMes(this);
+				PopUpManager.removePopUp(this);				
+			}
+			
+			public function limpaCampos():void{
+				carregaVencimento();
+			}
+			
+			public function despesaGravado(event:ResultEvent):void{
+				Alert.show( "Receita salva com sucesso!" );
+				listaReceitas();
+			}
+			
+			public function despesaRemovido(event:ResultEvent):void{
+				Alert.show( "Receita removida com sucesso!" );
+				listaReceitas();
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.message);
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+            
+            public function carregaDados():void{
+            	this.receitas = (ArrayCollection) (trpc.selectedItem.receitasCollection);
+            	tr.dataProvider = receitas;	
+            }
+
+			
+		]]>
+	</mx:Script>
+	
+	<mx:RemoteObject id="receitaPorConvenioService" showBusyCursor="true"
+		fault="onFault(event)" destination="receitaPorConvenioService">
+		<mx:method name="getListPorVencimento" fault="onFault(event)" result="hrdpGrid(event)">
+			<mx:arguments>
+	            <commandArgs>{Vencimento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>    	
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="despesaPorVencimentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="despesaPorVencimentoService">
+		<mx:method name="getListPorVencimento" fault="onFault(event)" result="carregaDespesas(event)">
+			<mx:arguments>
+	            <commandArgs>{Vencimento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>    	
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="vencimentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="vencimentoService">
+		<mx:method name="getVencimentoAtual" fault="onFault(event)" result="setVencimento(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:Label x="10" y="12" text="Vencimento"/>
+	<mx:TextInput x="88" y="10" width="68" id="vencimento" enabled="false"/>
+	<mx:Panel id="pdg0" x="0" y="38" layout="absolute" title="Receitas Cadastradas Por Convênio" height="155" width="100%">
+		<mx:DataGrid id="trpc" dataProvider="{receitasPorConvenio}" x="0" y="0" width="100%"
+			height="100%" change="{carregaDados()}" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Convênio" dataField="rpcConvenio" labelFunction="propChainLabelFunction" width="100"/>
+				<mx:DataGridColumn headerText="Qtde Exames" dataField="rpcQuantidadeExamesTotal" width="40"/>
+				<mx:DataGridColumn headerText="Valor Bruto" dataField="rpcValorBrutoTotal" width="40"/>
+				<mx:DataGridColumn headerText="Despesas" dataField="rpcValorDespesasTotal" width="40"/>
+				<mx:DataGridColumn headerText="Valor Creditado" dataField="rpcValorCreditado" width="50"/>								
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:Panel id="pdg" x="0" y="201" layout="absolute" title="Receitas Cadastradas" height="127" width="100%">
+		<mx:DataGrid id="tr" dataProvider="{receitas}" x="0" y="0" width="100%"
+			height="100%">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Departamento" dataField="recDepartamento" labelFunction="propChainLabelFunction" width="100"/>
+				<mx:DataGridColumn headerText="Qtde Exames" dataField="recQuantidadeExames" width="40"/>
+				<mx:DataGridColumn headerText="Valor Bruto" dataField="recValorBruto" width="40"/>
+				<mx:DataGridColumn headerText="Despesas" dataField="recValorDespesas" width="40"/>
+				<mx:DataGridColumn headerText="Valor Liquido" dataField="recValorLiquido" width="40"/>								
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:Panel id="pdg2" x="0" y="336" layout="absolute" title="Despesas Cadastradas" height="176" width="100%">
+		<mx:DataGrid id="dg" dataProvider="{despesas}" x="0" y="0" width="100%"
+			change="{carregaDados()}" height="100%" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Nome" dataField="dpvDespesa" width="80"/>
+				<mx:DataGridColumn headerText="Categoria" dataField="dpvDespesa.desCategoria" labelFunction="propChainLabelFunction" width="80"/>
+				<mx:DataGridColumn headerText="Valor" dataField="dpvValor" width="40"/>
+				<mx:DataGridColumn headerText="Venc." dataField="dpvVencimento" labelFunction="propChainLabelFunction" width="40"/>
+				<mx:DataGridColumn headerText="Departamento" dataField="dpvDespesa.desDepartamento" labelFunction="propChainLabelFunction" width="100"/>				
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ControlBar height="56">
+		<mx:Button label="Finalizar" id="btnNovo" icon="@Embed(source='../images/alert.png')" click="{finalizaVencimento()}"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed(source='../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

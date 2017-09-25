@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" title="Relatórios por Sócio" 
+	width="372" height="466" xmlns:components="components.*">
+	<mx:Script>
+		<![CDATA[
+			import entity.util.CriterioDePesquisaComparacaoString;
+			import entity.util.ConsultaPorCriterios;
+			import entity.util.CriterioDePesquisaIntervalo; 
+			import entity.CategoriaDespesa;
+			import entity.util.CriterioDePesquisaComparacaoNumero;
+			import entity.util.CriterioDePesquisaOR;
+			import entity.util.CriterioDePesquisa;
+			import mx.events.CollectionEvent;
+			import entity.DepartamentoSocio;
+			import entity.Socio;
+			import entity.Departamento;
+			import entity.DepartamentoDepartamento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			
+			[Bindable]
+			private var dateInicial:Date = new Date(2015, 00, 01);
+            [Bindable]
+			private var dateFinal:Date = new Date(2015, 00, 01);
+            
+            [Bindable]
+			public var socios:ArrayCollection;
+            
+            public function init():void{
+				listaSocios();
+            }
+ 
+            public function listaSocios():void{
+				socioService.getList();				
+			}
+			
+			public function setSociosCombo(event:ResultEvent):void{
+				socios = (ArrayCollection)(event.result);
+				var novoSocio:Socio = new Socio();
+				novoSocio.socNome = "UM";
+				socios.addItemAt(novoSocio, 0);
+				sociosCombo.dataProvider = socios;
+				sociosCombo.selectedIndex = -1;							
+			}
+			
+			public function limpaCampos():void{
+				//nome.text = "";
+			}
+			
+			public function getMesFormatado(mes:int):String{
+				return ((mes < 9) ? "0" : "") + (mes + 1);
+			}
+			
+			public function gerarRelatorioSocios(): void{				
+				var request:URLRequest = new URLRequest(arvoreTiposRelatorios.selectedItem.@data);
+		 		var vars:URLVariables  = new URLVariables();
+		 		if(sociosCombo.selectedIndex < 1 && arvoreTiposRelatorios.selectedItem.@possuiRelatorioUM == "NAO"){
+		 			return;
+		 		}
+		 		
+		 		
+		 		if(sociosCombo.selectedIndex >=0){
+		 			vars.socioId = socios.getItemAt(sociosCombo.selectedIndex).socId;
+		 			vars.socioNome = socios.getItemAt(sociosCombo.selectedIndex).socNome;
+		 		}	
+		 		else { 
+		 			vars.socioId = "";
+		 			vars.socioNome = "";
+		 		}
+		 		vars.dataInicial = (dataInicial.displayedYear + "/" + getMesFormatado(dataInicial.displayedMonth));
+		 		vars.dataFinal = (dataFinal.displayedYear + "/" + getMesFormatado(dataFinal.displayedMonth));
+		 		
+		 		vars.imprimirDetalhes = imprimirDetalhes.selected ? "SIM" : "NAO";
+		 		
+				request.data = vars;		
+				request.method = URLRequestMethod.POST;
+			
+				navigateToURL ( request, "_blank" );				
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.message);
+			}
+			private function initTree():void {
+                 arvoreTiposRelatorios.expandItem(TiposRelatorios.getItemAt(2), true);
+                 arvoreTiposRelatorios.expandItem(TiposRelatorios.getItemAt(1), true);
+                 arvoreTiposRelatorios.selectedIndex = 2;
+            }
+		]]>
+	</mx:Script>
+	
+	<mx:Array id="validadores">
+		<mx:NumberValidator id="validadorComboSocio" source="{sociosCombo}" lowerThanMinError="Escolha um Sócio." 
+			property="selectedIndex" minValue="0" 
+		/>
+	</mx:Array>
+	
+	<mx:XMLListCollection id="TiposRelatorios">
+			<mx:XMLList>
+				<node label="Relatórios Parciais" data="100">
+                    <node label="Receitas" data="ServletReportReceitasSocio" possuiRelatorioUM="NAO"/>
+                    <node label="Despesas" data="ServletReportDespesasSocio" possuiRelatorioUM="NAO"/>
+                    <node label="Retiradas" data="ServletReportRetiradasSocio" possuiRelatorioUM="NAO"/>
+                    <node label="Aplicações" data="ServletReportAplicacoesSocio" possuiRelatorioUM="NAO"/>
+                 </node>
+                 <node label="Relatórios Consolidados" data="100">
+                    <node label="Resumo Financeiro" data="ServletReportResumoMensal" possuiRelatorioUM="SIM"/>
+                    <node label="Demonstrativo Financeiro" data="ServletReportDemonstrativoFinanceiro" possuiRelatorioUM="SIM"/>
+                 </node>
+                 <node label="Relatórios Executivos" data="100">
+                    <node label="Prestação de Contas Anual" data="ServletReportDistribuicaoAnual" possuiRelatorioUM="NAO"/>
+                    <node label="Quantidade de exames por Convênio" data="ServletReportExamesPorConvenio" possuiRelatorioUM="SIM"/>
+                    <node label="Saldo Geral" data="ServletReportGeralSocio" possuiRelatorioUM="NAO"/>
+                    <node label="Valor Recebido" data="ServletReportDinheiroRecebidoSocio" possuiRelatorioUM="SIM"/>
+                    <node label="Resultado Líquido" data="ServletReportDinheiroAReceberSocio" possuiRelatorioUM="NAO"/>
+                 </node>
+            </mx:XMLList>
+		</mx:XMLListCollection>
+	
+	<mx:RemoteObject id="socioService" showBusyCursor="true"
+		fault="onFault(event)" destination="socioService">
+		<mx:method name="getList" fault="onFault(event)" result="setSociosCombo(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:Label x="10" y="10" text="Data Inicial:" fontSize="11" fontWeight="bold"/>
+	<mx:VBox  x="10" y="37" height="30">
+    	<components:MonthChooser id="dataInicial" yearNavigationEnabled="true" styleName="monthChooserStyles" selectedDate="{dateInicial}" height="31" width="160" showToday="false"/>
+    </mx:VBox>	
+	<mx:Label text="Data Final:" fontSize="11" fontWeight="bold" x="182" y="10"/>
+	<mx:VBox x="182" y="37" height="30">
+		<components:MonthChooser id="dataFinal" yearNavigationEnabled="true" styleName="monthChooserStyles" selectedDate="{dateFinal}" height="31" width="160" showToday="false"/>
+	</mx:VBox>	
+	<mx:Label x="10" y="82" text="Sócio:" fontSize="11" fontWeight="bold"/>
+	<mx:ComboBox dataProvider="{socios}" x="62" y="82" width="280" id="sociosCombo" labelField="socNome" height="27" fontSize="12" fontWeight="bold">
+	</mx:ComboBox>
+	<mx:CheckBox x="21" y="120" label="Detalhado?" id="imprimirDetalhes" selected="false"/>
+	<mx:Tree id="arvoreTiposRelatorios" x="10" y="150" labelField="@label" dataProvider="{TiposRelatorios}" width="332" height="222" selectedIndex="1" creationComplete="initTree()"></mx:Tree>
+	<mx:ControlBar height="43" y="100">
+		<mx:Button label="Consultar" enabled="true" id="btnImprimirGeral1" icon="@Embed(source='../images/print.png')" click="{gerarRelatorioSocios()}"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+</mx:TitleWindow>

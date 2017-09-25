@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" title="Sócios da Empresa" width="620" height="272">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import entity.Socio;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			
+			[Bindable]
+			public var lista:ArrayCollection; 
+			public var idSelecionado:int = 0;
+            
+
+			public function init():void{
+				habilitaValidadores(false);
+				listaSocios();
+			}
+			
+			public function listaSocios():void{
+				socioService.getList();
+			}
+			
+			public function hrdpGrid(event:ResultEvent):void{
+				lista = (ArrayCollection)(event.result);
+				lista.sort = new Sort();
+                lista.sort.fields = [new SortField("socNome", false, false)];
+                lista.refresh();
+			}
+			
+			public function carregaDados():void{
+				if(lista.length > 0) {
+					if(dg.selectedIndex < 0)
+						dg.selectedIndex = 0;
+					idSelecionado = dg.selectedItem.socId;
+					nome.text = dg.selectedItem.socNome;
+				}							
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					habilitaValidadores(true);
+					habilitaEdic(true);
+					carregaDados();
+					habilitaAlter(true);
+					nome.setFocus();
+				}
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				nome.enabled = hab;
+			}
+			
+			public function cancelaOper():void{
+				limpaCampos();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				carregaDados();
+				habilitaValidadores(false);					
+			}
+			
+			public function criaNovo():void{
+				habilitaValidadores(true);
+				limpaCampos();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				nome.setFocus();
+			}
+			
+			public function limpaCampos():void{
+				idSelecionado = 0;
+				nome.text = "";
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				btnNovo.enabled = !hab;
+				btnAlterar.enabled = !hab;
+				btnSalvar.enabled = hab;
+				btnCancelar.enabled = hab;
+				btnRemover.enabled = !hab;
+				btnFechar.enabled = !hab;
+				pdg.enabled = !hab;
+				validadorNome.enabled = hab;
+			}
+			
+			public function habilitaValidadores(hab:Boolean):void{
+				validadorNome.enabled = hab;	
+			}
+			
+			public function socioGravado(event:ResultEvent):void{
+				habilitaEdic(false);
+				habilitaAlter(false);
+				habilitaValidadores(false);
+				limpaCampos();
+				Alert.show( "Sócio salvo com sucesso!" );
+				listaSocios();
+			}
+			
+			public function socioRemovido(event:ResultEvent):void{
+				limpaCampos();
+				listaSocios();
+				Alert.show( "Sócio removido com sucesso!" );				
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function getParameters():Socio{
+				var socio : Socio = new Socio();
+				socio.socId = idSelecionado;
+				socio.socNome = nome.text;
+				
+				
+				return socio;
+			}
+			
+			public function salvarSocio():void{
+				 if (validar()){
+				 	if(Application.application.isAdministrador()) {
+						socioService.save( this.getParameters());
+				 	}
+				 	else {
+				 		Alert.show("Você não possui permissão \npara salvar registros!");
+				 	}				 		
+				 } 
+			}
+			
+			public function removerSelecionado():void{
+				Alert.yesLabel = "Sim";
+			  	Alert.noLabel = "Não";
+			  	Alert.show("Deseja remover este Sócio?","Remover", Alert.YES | Alert.NO, this, confirmaRemocao);				 
+			}
+			
+			public function confirmaRemocao(event:CloseEvent):void{
+				if (event.detail==Alert.YES) {
+					if(dg.selectedIndex >= 0){
+						if(Application.application.isAdministrador()){
+							socioService.remove( this.getParameters() );
+						}
+						else {
+							Alert.show("Você não possui permissão \npara remover este registro!");
+						}
+					}
+					else {
+				 		Alert.show("Selecione um Registro!");
+				 	}			
+				}
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						return false;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.rootCause.localizedMessage, "OCORREU UM ERRO");
+			}
+			
+			public function validate(v:Validator):void{
+				v.validate();								
+			}
+			
+			public function upperCampo(campo : TextInput):void {
+				var comparador: String = "àãõâêôáéíóúç";
+				var texto: String = campo.text;
+				var posicao: int = campo.selectionBeginIndex - 1;
+				var caracter: String = texto.charAt(posicao);
+				
+				if (comparador.indexOf(caracter) != -1){
+					var strCampo: String = campo.text;
+					campo.text = strCampo.toUpperCase();
+					campo.selectionBeginIndex = posicao+1;
+					campo.selectionEndIndex = posicao+1;
+				}				
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Array id="validadores">
+		
+		<mx:StringValidator id="validadorNome" source="{nome}" minLength="2" required="true" property="text"
+			requiredFieldError="Nome não pode ser vazio." tooShortError="Nome deve ter no mínimo 2 caracteres."
+		/>	
+		
+	</mx:Array>
+	
+	<mx:RemoteObject id="socioService" showBusyCursor="true"
+		fault="onFault(event)" destination="socioService">
+		<mx:method name="save" fault="onFault(event)" result="socioGravado(event)">
+			<mx:arguments>
+	            <commandArgs>{Socio}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="remove" fault="onFault(event)" result="socioRemovido(event)">
+			<mx:arguments>
+	            <commandArgs>{Socio}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="getList" fault="onFault(event)" result="hrdpGrid(event)"/>
+            		
+	</mx:RemoteObject>
+	<mx:Label x="10" y="12" text="Nome"/>
+	<mx:TextInput x="62" y="10" width="308" id="nome" enabled="false" maxChars="40" restrict="[A-Z \- \\ ÀÃÕÂÊÔÁÉÍÓÚÇ àãõâêôáéíóúç]" change="validate(validadorNome); upperCampo(this.nome)"/>
+	<mx:Panel id="pdg" x="10" y="36" layout="absolute" title="Sócios Cadastrados" height="138" width="580">
+		<mx:DataGrid id="dg" dataProvider="{lista}" x="0" y="0" width="100%"
+			change="{carregaDados()}" height="100%" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Nome" dataField="socNome"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ControlBar height="56">
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarSocio()}"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')" click="{cancelaOper()}"/>
+		<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

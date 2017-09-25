@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="absolute" title="Despesas do Sistema" width="712" height="404" 
+	xmlns:control="br.com.thinklab.util.control.*" xmlns:components="components.*">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import entity.DespesaPorVencimento;
+			import entity.Despesa;
+			import entity.DespesaExtra;
+			import entity.CategoriaDespesa;
+			import entity.Departamento;
+			import entity.Vencimento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			//import components.DecimalInput;
+			
+			private var vencimentoAtual:Vencimento;
+			private var estaAdicionando:Boolean;
+			private var ehDespesaSomada:Boolean;			
+			private var ehExtraSelecionado:Boolean;
+            public var myPattern:RegExp = /[.]/g;				    
+			public var myPattern2:RegExp = /[,]/g;		    
+
+            
+			[Bindable]
+			public var despesas:ArrayCollection; 
+            [Bindable]
+			public var despesasPorVencimento:ArrayCollection; 
+            
+			public function init():void{
+				ehExtraSelecionado = false;
+				this.dg.addEventListener(KeyboardEvent.KEY_DOWN,checkKeyTabela);
+			  	this.valor.addEventListener(KeyboardEvent.KEY_DOWN,checkKeyValor);
+			  	
+				habilitaValidadores(false);
+				listaDespesas();				
+				carregaVencimento();
+				estaAdicionando = false;
+				ehDespesaSomada = false;
+				dg.setFocus();
+				dg.selectedIndex = 0;
+			}
+			
+			public function carregaVencimento():void{
+				vencimentoService.getVencimentoAtual();
+			}
+			
+			public function listaDespesas():void{
+				despesaService.getList();
+			}
+			
+			public function listaDespesasPorVencimento():void{
+				despesaPorVencimentoService.getListPorVencimento(vencimentoAtual);
+			}
+			
+			public function hrdpGrid(event:ResultEvent):void{
+				despesasPorVencimento = (ArrayCollection)(event.result);
+				dg.dataProvider = despesasPorVencimento;
+				despesasPorVencimento.sort = new Sort();
+                despesasPorVencimento.sort.fields = [new SortField("dpvDespesa", false, false)];
+                despesasPorVencimento.refresh();
+			}
+			
+			public function setDespesasCombo(event:ResultEvent):void{
+				despesas = (ArrayCollection)(event.result);
+				despesasCombo.dataProvider = despesas;
+				despesas.sort = new Sort();
+                despesas.sort.fields = [new SortField("desNome", false, false)];
+                despesas.refresh();						
+			}
+			
+			public function setVencimento(event:ResultEvent):void{
+				vencimentoAtual = (Vencimento)(event.result);
+				vencimento.text = vencimentoAtual.toString();
+				listaDespesasPorVencimento();														
+			}
+			
+			public function getDespesasExtras():ArrayCollection{
+				if(dg.selectedItem.despesaExtraCollection == null)
+					dg.selectedItem.despesaExtraCollection = new ArrayCollection;
+				return dg.selectedItem.despesaExtraCollection;
+			}
+			
+			public function abreTelaExtras():void {
+				if(!estaAdicionando) {
+					this.abreTelaDespesasExtra();
+				} else {
+					Alert.show("É necessário salvar a despesa antes de adicionar\numa despesa extra para a mesma.");
+				}
+			}
+			
+			public function abreTelaDespesasExtra():void {
+				var receitaPopUp : despesaExtra = despesaExtra(PopUpManager.createPopUp(this, components.despesaExtra, true));
+				receitaPopUp.setDespesas(getDespesasExtras());
+				receitaPopUp.addEventListener(CloseEvent.CLOSE, atualizaTotalExtras);
+				PopUpManager.centerPopUp(receitaPopUp);
+				loginEffect.target=receitaPopUp;
+				loginEffect.play();
+			}			
+			
+			public function atualizaTotalExtras(evt:CloseEvent):void {
+				//dg.selectedItem.despesaExtraCollection = de;
+				nExtras.text = dg.selectedItem.despesaExtraCollection.length;
+				var dpv:DespesaPorVencimento = despesasPorVencimento.getItemAt(dg.selectedIndex) as DespesaPorVencimento;
+				var totalExtras:Number = new Number();
+				for each (var despesaEstra:DespesaExtra in dpv.despesaExtraCollection)
+				{
+					totalExtras += parseFloat(despesaEstra.deValor.replace(myPattern, "").replace(myPattern2, "."));
+				}				
+				this.valor.text = formataNumberToMoeda(totalExtras);
+			}
+			
+			private function formataNumberToMoeda (valor: Number): String {
+		    	var fator:Number = Math.pow(10, 2);
+				var result:Number = Number( int((valor * fator) + 0.5) / fator );
+				return moedaFormat.format(result);				
+		    }
+		    
+		    public function carregaDados():void{
+				if(despesas.length > 0) {
+					if(dg.selectedIndex < 0)
+						dg.selectedIndex = 0;
+					var i : int;
+					//var dpv:DespesaPorVencimento = dg.selectedItem as DespesaPorVencimento; 
+					valor.text = dg.selectedItem.dpvValor;
+					vencimento.text = dg.selectedItem.dpvVencimento.venNome;
+					observacao.text = dg.selectedItem.dpvObservacao; 	
+					nExtras.text = dg.selectedItem.despesaExtraCollection.length;
+					var des : Despesa = (Despesa) (dg.selectedItem.dpvDespesa);
+					for ( i=0; i < despesas.length; i++){
+						var des2 : Despesa = (Despesa) (despesas.getItemAt(i));
+						if (des.desId == des2.desId)
+							despesasCombo.selectedIndex = i;
+					}
+					if(des.desEhExtra == "SIM")
+						ehExtraSelecionado = true;
+					else
+						ehExtraSelecionado = false; 
+				}		
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					habilitaValidadores(true);
+					habilitaEdic(true);
+					carregaDados();
+					habilitaAlter(true);
+					valor.setFocus();
+				}
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				valor.enabled = hab;
+				despesasCombo.enabled = hab;
+				observacao.enabled = hab;
+				nExtras.enabled = hab && ehExtraSelecionado;
+				botaoGerenciarExtras.enabled = hab && ehExtraSelecionado; 
+			}
+			
+			public function cancelaOper():void{
+				limpaCampos();
+				carregaDados();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				habilitaValidadores(false);				
+			}
+			
+			public function criaNovo():void{
+				habilitaValidadores(true);
+				limpaCampos();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				valor.setFocus();				
+				estaAdicionando = true;
+			}
+			
+			public function limpaCampos():void{
+				valor.text = "";
+				despesasCombo.selectedIndex = -1;
+				vencimento.text = vencimentoAtual.venNome;
+				estaAdicionando = false; 
+				ehDespesaSomada = false;
+				observacao.text = "";
+				nExtras.text = "";
+				ehExtraSelecionado = false;
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				btnNovo.enabled = !hab;
+				btnAlterar.enabled = !hab;
+				btnSalvar.enabled = hab;
+				btnCancelar.enabled = hab;
+				btnRemover.enabled = !hab;
+				btnFechar.enabled = !hab;
+				pdg.enabled = !hab;			
+			}
+			
+			public function habilitaValidadores(hab:Boolean):void{
+				validadorComboDespesa.enabled = hab;
+				validadorValor.enabled = hab;	
+			}
+			
+			
+			public function despesaGravado(event:ResultEvent):void{
+				habilitaEdic(false);
+				habilitaAlter(false);
+				 	habilitaValidadores(false);
+				if(!estaAdicionando){
+					var dpv:DespesaPorVencimento = event.result as DespesaPorVencimento;
+					var i:int = dg.selectedIndex;
+					despesasPorVencimento.setItemAt(dpv,dg.selectedIndex);
+					dg.setFocus();	
+					if(i < despesasPorVencimento.length){
+						dg.selectedIndex = i + 1;		
+					}
+					carregaDados();			
+				}
+				else {
+					if(ehDespesaSomada) {
+						selecinaIndiceDespesaIncrementada();
+						carregaDados();
+					}
+					else {
+						despesasPorVencimento.addItem(event.result as DespesaPorVencimento);
+					}
+					ehDespesaSomada = false; 
+					estaAdicionando = false;
+				}
+				Alert.show( "Despesa salva com sucesso!");
+			}
+						
+			public function despesaRemovido(event:ResultEvent):void{
+				limpaCampos();
+				listaDespesasPorVencimento();
+				Alert.show( "Despesa removida com sucesso!" );				
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function getParameters():DespesaPorVencimento{
+				var dpv : DespesaPorVencimento = null;
+				if(!estaAdicionando){
+					dpv = (DespesaPorVencimento) (despesasPorVencimento.getItemAt(dg.selectedIndex));
+				}
+				else {
+					dpv = getDespesaPorVencimentoExistente();
+					if(dpv != null){
+						ehDespesaSomada = true;
+						if(observacao.text != "" && observacao.text != null){
+							dpv.dpvObservacao = observacao.text;
+						}
+						var valorSomado:Number = parseFloat(dpv.dpvValor.replace(myPattern, "").replace(myPattern2, "."));
+						valorSomado += parseFloat(valor.text.replace(myPattern, "").replace(myPattern2, "."));
+						dpv.dpvValor = formataNumberToMoeda(valorSomado);
+						return dpv; 
+					}
+					else {
+						dpv = new DespesaPorVencimento();
+						dpv.dpvDespesa = new Despesa();
+					}
+				}
+				dpv.dpvValor = valor.text;
+				dpv.dpvObservacao = observacao.text;
+				dpv.dpvVencimento = vencimentoAtual;
+				dpv.dpvDespesa = (Despesa)(despesasCombo.selectedItem);				
+				
+				return dpv;
+			}
+			
+			public function getDespesaPorVencimentoExistente():DespesaPorVencimento{
+				var despesaAdicinada:Despesa = (Despesa)(despesasCombo.selectedItem);
+				for each (var dpv : DespesaPorVencimento in despesasPorVencimento) {
+					if(despesaAdicinada.desId == dpv.dpvDespesa.desId){
+						return dpv;
+					}
+				}
+				return null;
+			}
+			
+			public function selecinaIndiceDespesaIncrementada():void{
+				var despesaAdicinada:Despesa = (Despesa)(despesasCombo.selectedItem);
+				var i:int = 0;
+				for (i = 0; i < despesasPorVencimento.length; i++) {
+					if(despesaAdicinada.desId == despesasPorVencimento.getItemAt(i).dpvDespesa.desId){
+						dg.selectedIndex = i;
+						return;
+					}
+				}
+			}
+			
+			public function salvarDespesa():void{
+				if (validar()){
+				 	if(Application.application.isAdministrador()) {
+						var dpv:DespesaPorVencimento = null; 
+					 	dpv = this.getParameters();						
+						for each (var de : DespesaExtra in dpv.despesaExtraCollection) {
+							//Alert.show("fordd: " + dd.ddId);
+							de.despesaPorVencimento = dpv;
+							//despesaExtraService.save(de);
+							//Alert.show("fordd: salvei");	
+						}
+						despesaPorVencimentoService.save(dpv);
+				 	}
+				 	else {
+				 		Alert.show("Você não possui permissão \npara salvar registros!");
+				 	}				 		
+				 }
+			}
+			
+			public function removerSelecionado():void{
+				Alert.yesLabel = "Sim";
+			  	Alert.noLabel = "Não";
+			  	Alert.show("Deseja remover esta Despesa?","Remover", Alert.YES | Alert.NO, this, confirmaRemocao);				 
+			}
+			
+			public function confirmaRemocao(event:CloseEvent):void{
+				if (event.detail==Alert.YES) {
+					if(dg.selectedIndex >= 0){
+						if(Application.application.isAdministrador()){
+							despesaPorVencimentoService.remove( this.getParameters() );
+						}
+						else {
+							Alert.show("Você não possui permissão \npara remover este registro!");
+						}
+					}
+					else {
+				 		Alert.show("Selecione um Registro!");
+				 	}			
+				}
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			public function validate(v:Validator):void{
+				v.validate();								
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.rootCause.localizedMessage, "OCORREU UM ERRO");
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+            
+            public function checkKeyTabela(event:KeyboardEvent):void {
+            	if(btnSalvar.enabled == false && event.charCode == 13){
+                	alterar();
+                	valor.focusEnabled = true;
+                	valor.selectionBeginIndex = 0;
+                	valor.selectionEndIndex = valor.text.length;
+                }                	
+            } 
+			
+			public function checkKeyValor(event:KeyboardEvent):void {
+                if(btnSalvar.enabled == true && event.charCode == 13){
+                	salvarDespesa();                	
+                }
+            }
+            
+            private function selecionaTexto(input: TextInput) :void {
+		    	input.selectionBeginIndex = 0;
+		    	input.selectionBeginIndex = input.text.length;
+		    }
+		    
+		    private function formataMoeda (input: TextInput) :void {
+		    	if(input.text == "")
+		    		input.text = "0,00"
+		    	else if(input.text != "0,00") 
+		    		input.text = moedaFormat.format(input.text);
+		    }
+		]]>
+	</mx:Script>
+	
+	<!--mx:Binding source="dg.selectedItem.despesaExtraCollection.length" destination="nExtras.text"/-->
+	
+	<mx:NumberFormatter id="moedaFormat"
+        decimalSeparatorFrom=","
+	    decimalSeparatorTo=","
+	    precision="2"
+	    rounding="none"
+	    thousandsSeparatorFrom="."
+	    thousandsSeparatorTo="."
+	    useNegativeSign="true"
+	    useThousandsSeparator="true" 
+    />
+    <mx:TextInput id="inputMin" text="0.00" visible="false"/>
+	<mx:TextInput id="inputMax" text="999999" visible="false"/>
+	
+	<mx:Array id="validadores">		
+		<mx:NumberValidator id="validadorComboDespesa" source="{despesasCombo}" lowerThanMinError="Escolha uma Despesa." 
+			property="selectedIndex" minValue="0" 
+		/>
+		
+		<components:MyNumberValidator source="{valor}" id="validadorValor" property="text" 
+			thousandsSeparator="." decimalSeparator=","
+			minValue="{Number(inputMin.text)}" maxValue="{Number(inputMax.text)}"
+			lowerThanMinError="O valor das despesas precisa ser informado."/>
+			
+	</mx:Array>
+	
+	<mx:RemoteObject id="despesaService" showBusyCursor="true"
+		fault="onFault(event)" destination="despesaService">
+		<mx:method name="getList" fault="onFault(event)" result="setDespesasCombo(event)"/>
+            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="despesaExtraService" showBusyCursor="true"
+		fault="onFault(event)" destination="despesaExtraService">
+		<mx:method name="save" fault="onFault(event)">
+			<mx:arguments>
+	            <commandArgs>{DespesaExtra}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="remove" fault="onFault(event)">
+			<mx:arguments>
+	            <commandArgs>{DespesaExtra}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="despesaPorVencimentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="despesaPorVencimentoService">
+		<mx:method name="save" fault="onFault(event)" result="despesaGravado(event)">
+			<mx:arguments>
+	            <commandArgs>{DespesaPorVencimento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="remove" fault="onFault(event)" result="despesaRemovido(event)">
+			<mx:arguments>
+	            <commandArgs>{DespesaPorVencimento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="getListPorVencimento" fault="onFault(event)" result="hrdpGrid(event)">
+    		<mx:arguments>
+	            <commandArgs>{Vencimento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="vencimentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="vencimentoService">
+		<mx:method name="getVencimentoAtual" fault="onFault(event)" result="setVencimento(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:Parallel id="loginEffect">
+		<mx:Fade alphaFrom="0" alphaTo="1"/>
+		<mx:WipeDown duration="800"/>
+		<mx:Sequence>
+		    <mx:Blur duration="300" blurYFrom="1.0" blurYTo="20.0" />            
+		    <mx:Blur duration="300" blurYFrom="20.0" blurYTo="1" />            
+		</mx:Sequence>
+	</mx:Parallel>
+	<mx:Label x="10" y="12" text="Vencimento"/>
+	<mx:Label x="10" y="40" text="Observação"/>
+	<mx:Label x="366" y="12" text="Despesa"/>
+	<mx:TextInput x="88" y="10" width="80" id="vencimento" enabled="false"/>
+	<mx:Label x="176" y="12" text="Valor Total (R$)"/>
+	<mx:TextInput x="278" y="10" width="80" id="valor" enabled="false" maxChars="9" focusIn="selecionaTexto(valor)" focusOut="formataMoeda(valor)">
+		<mx:focusOut>
+	 		<![CDATA[
+	 			if(valor.text == "")
+		    		valor.text = "0,00"
+		    	else if(valor.text != "0,00") 
+		    		this.valor.text = moedaFormat.format(this.valor.text);
+	 			validate(validadorValor);
+	 		]]>
+	 	</mx:focusOut>
+	</mx:TextInput>
+	<mx:ComboBox dataProvider="{despesas}" x="427" y="10" width="257" id="despesasCombo" enabled="false" labelField="desNome" change="{validate(validadorComboDespesa)}">
+	</mx:ComboBox>
+	<mx:Panel id="pdg" x="0" y="68" layout="absolute" title="Despesas Cadastradas" height="248" width="100%">
+		<mx:DataGrid id="dg" dataProvider="{despesasPorVencimento}" x="0" y="0" width="100%"
+			change="{carregaDados()}" height="100%" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Nome" dataField="dpvDespesa.desNome" width="115" labelFunction="propChainLabelFunction"/>
+				<mx:DataGridColumn headerText="Categoria" dataField="dpvDespesa.desCategoria" labelFunction="propChainLabelFunction" width="65"/>
+				<mx:DataGridColumn headerText="Valor" dataField="dpvValor" width="40"/>
+				<mx:DataGridColumn headerText="Venc." dataField="dpvVencimento" labelFunction="propChainLabelFunction" width="40"/>
+				<mx:DataGridColumn headerText="Departamento" dataField="dpvDespesa.desDepartamento" labelFunction="propChainLabelFunction" width="80"/>				
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:TextInput x="88" y="38" width="270" id="observacao" enabled="false"/>
+	<mx:Label x="366" y="40" text="Despesas Extras"/>
+	<mx:TextInput x="466" y="38" width="65" enabled="false" id="nExtras" editable="false"/>
+	<mx:Button x="539" y="37" label="Gerenciar Extras" icon="@Embed(source='../images/alter.png')" click="{abreTelaExtras()}" id="botaoGerenciarExtras" enabled="false"/>
+	<mx:ControlBar height="56" fontWeight="bold">
+		<mx:Button label="Button" width="35" visible="false"/>
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarDespesa()}"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')" click="{cancelaOper()}"/>
+		<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+	
+</mx:TitleWindow>

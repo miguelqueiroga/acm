@@ -1,0 +1,26 @@
+Application {
+    background-color: #FFFFFF;    
+}
+Label{
+    font-weight:bold;    
+}
+
+.monthChooserStyles {
+    headerColors: #f3f6fb, #f3f6fb;
+    borderColor: #ccdbf0;
+    
+    /* Previous Month */
+    prevMonthUpSkin: Embed("images/resultset_previous.png");
+    prevMonthOverSkin: Embed("images/resultset_previous.png");
+    prevMonthDownSkin: Embed("images/resultset_previous.png");
+    prevMonthDisabledSkin: Embed("images/resultset_previous.png");
+
+    /* Next Month */
+    nextMonthUpSkin: Embed("images/resultset_next.png");
+    nextMonthOverSkin: Embed("images/resultset_next.png");
+    nextMonthDownSkin: Embed("images/resultset_next.png");
+    nextMonthDisabledSkin: Embed("images/resultset_next.png");
+}
+
+
+

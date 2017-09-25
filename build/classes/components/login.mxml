@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="init()" close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="350" height="136" title="Login do Sistema">
+	<mx:Script>
+		<![CDATA[
+			import mx.validators.Validator;
+			import entity.Usuario;
+			  import mx.rpc.events.FaultEvent;
+			  import mx.collections.ArrayCollection;
+   			  import mx.rpc.events.ResultEvent;
+			  import mx.utils.ObjectUtil;
+			  import mx.managers.PopUpManager;
+			  import mx.events.CloseEvent; 
+			  import mx.core.Application;
+			  import mx.controls.Alert;
+			  
+			  public function init():void{
+			  	this.senha.addEventListener(KeyboardEvent.KEY_DOWN,checkKey)
+			  	usuario.setFocus();
+			  }
+			  
+			  public function limpar():void{
+			  	usuario.text = "";
+			  	senha.text = "";
+			  }
+		
+			  public function getParameters():Object{
+			  	return {
+			  		"usuario.nome" : usuario.text,
+			  		"usuario.senha" : senha.text
+			  	}
+			  }	
+			  
+			  public function logar():void{
+			  	  usuarioService.login( usuario.text, senha.text );
+			  }
+			  
+			  public function retorno(event:ResultEvent):void{
+			  	var usu : Usuario;
+			  	usu = (Usuario) (event.result);
+			  	//Alert.show("retorno" + res);
+			  	if (usu != null){
+			  		fechar();
+			  		Application.application.setUsuario(usu);
+			  	} else {
+			  		Alert.show("Login Falhou!\nUsuário ou Senha inválidos.");
+			  	}
+			  }
+			  
+			  public function erro(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			  }			
+			  
+			  public function fechar():void{
+			  	PopUpManager.removePopUp(this);
+			  }
+			
+			public function upperCampo(campo : TextInput):void {
+				var comparador: String = "àãõâêôáéíóúç";
+				var texto: String = campo.text;
+				var posicao: int = campo.selectionBeginIndex - 1;
+				var caracter: String = texto.charAt(posicao);
+				
+				if (comparador.indexOf(caracter) != -1){
+					var strCampo: String = campo.text;
+					campo.text = strCampo.toUpperCase();
+					campo.selectionBeginIndex = posicao+1;
+					campo.selectionEndIndex = posicao+1;
+				}				
+			} 
+			
+			public function checkKey(event:KeyboardEvent):void {
+                if(event.charCode == 13)
+                	logar();
+            } 
+			  
+			  public function sair():void{
+			  	Alert.yesLabel = "Sim";
+			  	Alert.noLabel = "Não";
+			  	Alert.show("Deseja encerrar o programa?","Encerrar", Alert.YES | Alert.NO, this, encerrar);
+			  }
+			  
+			  public function encerrar(event:CloseEvent):void{
+			  	if (event.detail==Alert.YES)
+			  		navigateToURL(new URLRequest("javascript:window.close()"), "_self");
+			  }
+			  
+			 //Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.message, "OCORREU UM ERRO");
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:RemoteObject id="usuarioService" showBusyCursor="true"
+		fault="onFault(event)" destination="usuarioService">
+		<mx:method name="login" fault="onFault(event)" result="retorno(event)">
+			<mx:arguments>
+	            <commandArgs>{String}</commandArgs>
+	            <commandArgs>{String}</commandArgs>
+	        </mx:arguments>
+    	</mx:method> 
+            		
+	</mx:RemoteObject>
+	
+	<mx:Label x="10" y="9" text="Usuário"/>
+	<mx:Label x="10" y="39" text="Senha"/>
+	<mx:TextInput x="65" y="7" width="188" id="usuario" tabIndex="1" restrict="[A-Z \- \\ ÀÃÕÂÊÔÁÉÍÓÚÇ àãõâêôáéíóúç]" change="upperCampo(this.usuario)"/>
+	<mx:TextInput x="65" y="37" width="188" id="senha" displayAsPassword="true" tabIndex="2" restrict="[A-Z 0-9 \- \\ ÀÃÕÂÊÔÁÉÍÓÚÇ]"/>
+	<mx:Button x="65" y="66" label="Logar" click="{logar()}" tabIndex="3" icon="@Embed(source='../images/ok.png')" id="btLogar" width="87" height="22"/>
+	<mx:Button x="166" y="66" label="Limpar" click="{limpar()}" tabIndex="4" icon="@Embed('../images/cancel.png')" width="87" height="22"/>
+	<mx:Image x="261" y="10" source="images/login.png" width="65" height="76"/>
+	<mx:Image x="0" y="75" source="images/fechar.png" id="imgFechar" buttonMode="true" toolTip="Fecha o Sistema" click="{sair()}" width="20" height="21"/>
+	
+</mx:TitleWindow>

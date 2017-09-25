@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="absolute" title="Despesas do Sistema" width="620" height="332" 
+	xmlns:control="br.com.thinklab.util.control.*">
+	<mx:Script>
+		<![CDATA[
+			import entity.Despesa;
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import entity.DespesaExtra;
+			import entity.CategoriaDespesa;
+			import entity.Departamento;
+			import entity.Vencimento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			//import components.DecimalInput;
+            
+			[Bindable]
+			public var despesas:ArrayCollection; 
+			public var idSelecionado: int = 0;
+            public var estaAlterando:Boolean;  
+            public var janelaDPV:despesaPorVencimento; 
+
+			public function init():void{
+				estaAlterando = false;
+				habilitaValidadores(false);
+				habilitaEdic(false);
+				habilitaAlter(false);				
+				//if(this.despesas == null)
+					//this.despesas = new ArrayCollection();  					
+			}
+			
+			public function setDespesas(d:ArrayCollection):void{
+				despesas = d;
+				despesas.sort = new Sort();
+                despesas.sort.fields = [new SortField("deDescricao", false, false)];
+                despesas.refresh();                
+			}
+			
+			/*public function setJanelaDPV(janela:despesaPorVencimento):void{
+				this.janelaDPV = janela;
+				if(janelaDPV.getDespesasExtras() != null) {
+					this.despesas = janelaDPV.getDespesasExtras();
+				}
+				else
+					despesas = new ArrayCollection();  
+			}*/
+			
+			public function fecharJanela():void{
+				//this.janelaDPV.setDespesasExtras(despesas);
+				var closeEvent:CloseEvent = new CloseEvent(CloseEvent.CLOSE,true);
+      			this.dispatchEvent(closeEvent);
+				PopUpManager.removePopUp(this);
+			}
+			
+			private function formataNumberToMoeda (valor: Number): String {
+		    	var fator:Number = Math.pow(10, 2);
+				var result:Number = Number( int((valor * fator) + 0.5) / fator );
+				return moedaFormat.format(result);				
+		    } 
+			
+			public function carregaDados():void{
+				if(despesas.length > 0) {
+					if(dg.selectedIndex < 0)
+						dg.selectedIndex = 0;
+					var i : int;
+					idSelecionado = dg.selectedItem.deId;
+					nome.text = dg.selectedItem.deDescricao;
+					valor.text = dg.selectedItem.deValor;					
+				}
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					estaAlterando = true;
+					habilitaValidadores(true);
+					habilitaEdic(true);
+					carregaDados();
+					habilitaAlter(true);
+					nome.setFocus();
+				}
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				nome.enabled = hab;
+				valor.enabled = hab;
+			}
+			
+			public function cancelaOper():void{
+				limpaCampos();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				carregaDados();
+				habilitaValidadores(false);	
+				estaAlterando = true;				
+			}
+			
+			public function criaNovo():void{
+				habilitaValidadores(true);
+				limpaCampos();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				nome.setFocus();
+			}
+			
+			public function limpaCampos():void{
+				idSelecionado = 0;
+				nome.text = "";
+				valor.text = ""; 
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				btnNovo.enabled = !hab;
+				btnAlterar.enabled = !hab;
+				btnSalvar.enabled = hab;
+				btnCancelar.enabled = hab;
+				btnRemover.enabled = !hab;
+				btnFechar.enabled = !hab;
+				pdg.enabled = !hab;			
+			}
+			
+			public function habilitaValidadores(hab:Boolean):void{
+				validadorNome.enabled = hab;	
+				validadorValor.enabled = hab;
+			}
+			
+			public function getParameters():DespesaExtra{
+				var de : DespesaExtra = new DespesaExtra();
+				de.deId = idSelecionado;
+				de.deDescricao = nome.text;
+				de.deValor = valor.text;
+				return de;
+			}
+			
+			public function salvarDespesa():void{
+				 if (validar()){
+				 	if(Application.application.isAdministrador()) {
+						if(!estaAlterando) {
+							despesas.addItem(this.getParameters());							
+						}
+						else {
+							var de : DespesaExtra = (DespesaExtra) (despesas.getItemAt(dg.selectedIndex));
+							de.deDescricao = nome.text;
+							de.deValor = valor.text;
+							estaAlterando = false;
+						}
+						Alert.show( "Despesa salva com sucesso!");
+						habilitaValidadores(false);
+						limpaCampos();
+						habilitaEdic(false);
+						habilitaAlter(false);
+				 	}
+				 	else {
+				 		Alert.show("Você não possui permissão \npara salvar registros!");
+				 	}				 		
+				 }
+			}
+			
+			public function removerSelecionado():void{
+				if(dg.selectedIndex >= 0){
+					Alert.yesLabel = "Sim";
+			  		Alert.noLabel = "Não";
+			  		Alert.show("Deseja remover esta Despesa?","Remover", Alert.YES | Alert.NO, this, confirmaRemocao);
+			  	}
+				else {
+			 		Alert.show("Selecione um Registro!");
+			 	}					 
+			}
+			
+			public function confirmaRemocao(event:CloseEvent):void{
+				if (event.detail==Alert.YES) {
+					if(Application.application.isAdministrador()){
+						var despesaExtra:DespesaExtra = despesas.getItemAt(dg.selectedIndex) as DespesaExtra; 
+						if(despesaExtra.deId > 0)
+							despesaExtraService.remove(despesaExtra);
+						despesas.removeItemAt(dg.selectedIndex);													
+					}
+					else {
+						Alert.show("Você não possui permissão \npara remover este registro!");
+					}								
+				}
+			}
+			
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.rootCause.localizedMessage, "OCORREU UM ERRO");
+			}
+			
+			public function despesaRemovido(event:ResultEvent):void{
+				limpaCampos();
+				Alert.show( "Despesa removida com sucesso!" );				
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			
+			public function validate(v:Validator):void{
+				v.validate();								
+			}
+			
+			public function upperCampo(campo : TextInput):void {
+				var comparador: String = "àãõâêôáéíóúç";
+				var texto: String = campo.text;
+				var posicao: int = campo.selectionBeginIndex - 1;
+				var caracter: String = texto.charAt(posicao);
+				
+				if (comparador.indexOf(caracter) != -1){
+					var strCampo: String = campo.text;
+					campo.text = strCampo.toUpperCase();
+					campo.selectionBeginIndex = posicao+1;
+					campo.selectionEndIndex = posicao+1;
+				}				
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:NumberFormatter id="moedaFormat"
+        decimalSeparatorFrom=","
+	    decimalSeparatorTo=","
+	    precision="2"
+	    rounding="none"
+	    thousandsSeparatorFrom="."
+	    thousandsSeparatorTo="."
+	    useNegativeSign="true"
+	    useThousandsSeparator="true" 
+    />
+    
+    <mx:Array id="validadores">
+		
+		<mx:StringValidator id="validadorNome" source="{nome}" minLength="2" required="true" property="text"
+			requiredFieldError="Nome não pode ser vazio." tooShortError="Nome deve ter no mínimo 2 caracteres."
+		/>
+		
+		<mx:StringValidator id="validadorValor" source="{valor}" required="true" property="text"
+			requiredFieldError="O Valor pode ser preenchido."
+		/>
+	</mx:Array>
+	
+	<mx:RemoteObject id="despesaExtraService" showBusyCursor="true"
+		fault="onFault(event)" destination="despesaExtraService">
+		<mx:method name="remove" fault="onFault(event)" result="despesaRemovido(event)">
+			<mx:arguments>
+	            <commandArgs>{DespesaExtra}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+	</mx:RemoteObject>
+	
+	
+	<mx:Label x="10" y="10" text="Nome"/>
+	<mx:TextInput x="55" y="8" width="327" id="nome" enabled="false" maxChars="40" restrict="[A-Z \- \\ ÀÃÕÂÊÔÁÉÍÓÚÇ àãõâêôáéíóúç 0-9]" change="validate(validadorNome); upperCampo(this.nome)"/>
+	<mx:Label x="399" y="10" text="Valor (R$)"/>
+	<mx:TextInput x="469" y="8" width="89" id="valor" enabled="false" maxChars="9">
+		<mx:focusOut>
+	 		<![CDATA[
+	 			if(valor.text == "")
+		    		valor.text = "0,00"
+		    	else if(valor.text != "0,00") 
+		    		this.valor.text = moedaFormat.format(this.valor.text);
+	 			validate(validadorValor);
+	 		]]>
+	 	</mx:focusOut>
+	</mx:TextInput>
+	<mx:Panel id="pdg" x="2" y="36" layout="absolute" title="Despesas Extras" height="205" width="598">
+		<mx:DataGrid id="dg" dataProvider="{despesas}" x="0" y="0" width="100%"
+			change="{carregaDados()}" height="100%" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Nome" dataField="deDescricao" width="80"/>
+				<mx:DataGridColumn headerText="Valor" dataField="deValor" width="80"/>																
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ControlBar height="56">
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarDespesa()}"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')" click="{cancelaOper()}"/>
+		<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{fecharJanela()}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

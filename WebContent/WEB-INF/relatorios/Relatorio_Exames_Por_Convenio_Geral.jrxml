@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Relatorio_Despesas_Vencimento_CD" pageWidth="842" pageHeight="595" orientation="Landscape" whenNoDataType="AllSectionsNoDetail" columnWidth="786" leftMargin="28" rightMargin="28" topMargin="28" bottomMargin="28" isSummaryWithPageHeaderAndFooter="true">
+	<property name="ireport.zoom" value="1.1000000000000005"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="124"/>
+	<style name="Crosstab Data Text" hAlign="Center"/>
+	<style name="table">
+		<box>
+			<pen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TH" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_CH" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TD" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1">
+		<box>
+			<pen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_TH" mode="Opaque" backcolor="#F0F8FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_TD" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table clean" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["C:\\Users\\Sebastiao\\workspace\\Plasnog\\WebContent\\WEB-INF\\relatorios\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="dataInicial" class="java.lang.String"/>
+	<parameter name="dataFinal" class="java.lang.String"/>
+	<parameter name="socio" class="java.lang.String">
+		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="vencimento" class="java.lang.String">
+		<fieldDescription><![CDATA[recReceitaPorConvenio.rpcVencimento.venNome]]></fieldDescription>
+	</field>
+	<field name="porcentagem" class="java.lang.String">
+		<fieldDescription><![CDATA[porcentagemDono]]></fieldDescription>
+	</field>
+	<field name="convenio" class="java.lang.String">
+		<fieldDescription><![CDATA[recReceitaPorConvenio.rpcConvenio.conNome]]></fieldDescription>
+	</field>
+	<field name="qtdeExames" class="java.lang.String">
+		<fieldDescription><![CDATA[recQuantidadeExames]]></fieldDescription>
+	</field>
+	<field name="socio" class="java.lang.String">
+		<fieldDescription><![CDATA[socio]]></fieldDescription>
+	</field>
+	<variable name="quantidadeExames" class="java.lang.Double">
+		<variableExpression><![CDATA[(Long.valueOf($F{qtdeExames}) * Double.parseDouble($F{porcentagem}.replaceAll("\\.", "").replaceAll(",", "\\.")) / 100)]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band/>
+	</title>
+	<pageHeader>
+		<band height="98">
+			<line>
+				<reportElement x="0" y="91" width="785" height="1"/>
+				<graphicElement>
+					<pen lineWidth="1.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement key="staticText-1" x="203" y="10" width="373" height="27" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="18" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[ACM - Assessoria em Contas Médicas]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-2" x="140" y="39" width="493" height="21" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="16" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Quantidade de exames da Clínica]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="586" y="68" width="198" height="20"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<textFieldExpression class="java.lang.String"><![CDATA["Período: " + $P{dataInicial} + " à " + $P{dataFinal}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageHeader>
+	<detail>
+		<band/>
+	</detail>
+	<pageFooter>
+		<band height="23">
+			<textField>
+				<reportElement x="664" y="2" width="80" height="20"/>
+				<textElement textAlignment="Right">
+					<font isBold="false"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="744" y="2" width="40" height="20"/>
+				<textElement>
+					<font isBold="false"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<summary>
+		<band height="209">
+			<elementGroup>
+				<crosstab>
+					<reportElement x="1" y="2" width="784" height="82" backcolor="#FAFAFA"/>
+					<rowGroup name="covenios" width="137" totalPosition="End">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{convenio} + ""]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+							<cellContents backcolor="#FFFFFF">
+								<textField isStretchWithOverflow="true">
+									<reportElement style="Crosstab Data Text" stretchType="RelativeToBandHeight" mode="Opaque" x="0" y="0" width="137" height="40" forecolor="#000000" backcolor="#CCFFCC"/>
+									<box>
+										<pen lineWidth="1.0" lineColor="#000000"/>
+										<topPen lineWidth="1.0" lineColor="#000000"/>
+										<leftPen lineWidth="1.0" lineColor="#000000"/>
+										<bottomPen lineWidth="1.0" lineColor="#000000"/>
+										<rightPen lineWidth="1.0" lineColor="#000000"/>
+									</box>
+									<textElement verticalAlignment="Middle">
+										<font size="10" isBold="true"/>
+									</textElement>
+									<textFieldExpression class="java.lang.String"><![CDATA[$V{covenios}]]></textFieldExpression>
+								</textField>
+							</cellContents>
+						</crosstabRowHeader>
+						<crosstabTotalRowHeader>
+							<cellContents backcolor="#FFFFFF" mode="Transparent">
+								<staticText>
+									<reportElement mode="Opaque" x="0" y="0" width="188" height="23" forecolor="#000000" backcolor="#D4E8FF"/>
+									<box>
+										<pen lineWidth="1.0" lineColor="#000000"/>
+										<topPen lineWidth="1.0" lineColor="#000000"/>
+										<leftPen lineWidth="1.0" lineColor="#000000"/>
+										<bottomPen lineWidth="1.0" lineColor="#000000"/>
+										<rightPen lineWidth="1.0" lineColor="#000000"/>
+									</box>
+									<textElement textAlignment="Center" verticalAlignment="Middle">
+										<font size="13" isBold="true"/>
+									</textElement>
+									<text><![CDATA[TOTAL]]></text>
+								</staticText>
+							</cellContents>
+						</crosstabTotalRowHeader>
+					</rowGroup>
+					<rowGroup name="socios" width="51" totalPosition="End">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{socio}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+							<cellContents>
+								<textField isStretchWithOverflow="true" isBlankWhenNull="false">
+									<reportElement style="Crosstab Data Text" stretchType="RelativeToBandHeight" mode="Opaque" x="0" y="0" width="51" height="20" forecolor="#000000" backcolor="#99FFCC"/>
+									<box>
+										<pen lineWidth="1.0"/>
+										<topPen lineWidth="1.0"/>
+										<leftPen lineWidth="1.0"/>
+										<bottomPen lineWidth="1.0"/>
+										<rightPen lineWidth="1.0"/>
+									</box>
+									<textElement verticalAlignment="Middle">
+										<font isBold="true"/>
+									</textElement>
+									<textFieldExpression class="java.lang.String"><![CDATA[$V{socios}]]></textFieldExpression>
+								</textField>
+							</cellContents>
+						</crosstabRowHeader>
+						<crosstabTotalRowHeader>
+							<cellContents>
+								<staticText>
+									<reportElement mode="Opaque" x="0" y="0" width="51" height="20" forecolor="#000000" backcolor="#CCFFFF"/>
+									<box>
+										<pen lineWidth="1.0" lineColor="#000000"/>
+										<topPen lineWidth="1.0" lineColor="#000000"/>
+										<leftPen lineWidth="1.0" lineColor="#000000"/>
+										<bottomPen lineWidth="1.0" lineColor="#000000"/>
+										<rightPen lineWidth="1.0" lineColor="#000000"/>
+									</box>
+									<textElement textAlignment="Center" verticalAlignment="Middle">
+										<font isBold="true"/>
+									</textElement>
+									<text><![CDATA[Subtotal]]></text>
+								</staticText>
+							</cellContents>
+						</crosstabTotalRowHeader>
+					</rowGroup>
+					<columnGroup name="vencimento" height="16" totalPosition="End">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{vencimento}]]></bucketExpression>
+						</bucket>
+						<crosstabColumnHeader>
+							<cellContents backcolor="#FFFFFF" mode="Opaque">
+								<box>
+									<pen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+									<topPen lineWidth="0.0"/>
+									<leftPen lineWidth="0.0"/>
+									<bottomPen lineWidth="0.0"/>
+									<rightPen lineWidth="0.0"/>
+								</box>
+								<textField isStretchWithOverflow="true">
+									<reportElement style="Crosstab Data Text" positionType="Float" x="0" y="0" width="42" height="16" forecolor="#000000"/>
+									<box>
+										<pen lineWidth="1.0"/>
+										<topPen lineWidth="1.0"/>
+										<leftPen lineWidth="1.0"/>
+										<bottomPen lineWidth="1.0"/>
+										<rightPen lineWidth="1.0"/>
+									</box>
+									<textElement verticalAlignment="Middle">
+										<font size="8" isBold="true"/>
+									</textElement>
+									<textFieldExpression class="java.lang.String"><![CDATA[new SimpleDateFormat("MMM/yyyy", new DateFormatSymbols(new java.util.Locale ("pt", "BR"))).format(new SimpleDateFormat("yyyy/MM").parse($V{vencimento}))]]></textFieldExpression>
+								</textField>
+							</cellContents>
+						</crosstabColumnHeader>
+						<crosstabTotalColumnHeader>
+							<cellContents backcolor="#FFFFFF" mode="Opaque">
+								<box>
+									<pen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+									<topPen lineWidth="0.0"/>
+									<leftPen lineWidth="0.0"/>
+									<bottomPen lineWidth="0.0"/>
+									<rightPen lineWidth="0.0"/>
+								</box>
+								<staticText>
+									<reportElement style="Crosstab Data Text" positionType="FixRelativeToBottom" mode="Opaque" x="0" y="0" width="50" height="16" forecolor="#000000" backcolor="#E6E8FF"/>
+									<box>
+										<pen lineWidth="1.0"/>
+										<topPen lineWidth="1.0"/>
+										<leftPen lineWidth="1.0"/>
+										<bottomPen lineWidth="1.0"/>
+										<rightPen lineWidth="1.0"/>
+									</box>
+									<textElement textAlignment="Center" verticalAlignment="Middle">
+										<font size="12" isBold="true"/>
+									</textElement>
+									<text><![CDATA[Total]]></text>
+								</staticText>
+							</cellContents>
+						</crosstabTotalColumnHeader>
+					</columnGroup>
+					<measure name="valorMeasure" class="java.lang.Double" calculation="Sum">
+						<measureExpression><![CDATA[$V{quantidadeExames}]]></measureExpression>
+					</measure>
+					<crosstabCell width="42" height="20">
+						<cellContents backcolor="#FFFFFF">
+							<box>
+								<pen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+								<topPen lineWidth="0.0"/>
+								<leftPen lineWidth="0.0"/>
+								<bottomPen lineWidth="0.0"/>
+								<rightPen lineWidth="0.0"/>
+							</box>
+							<textField isStretchWithOverflow="true">
+								<reportElement x="0" y="0" width="42" height="20" forecolor="#000000"/>
+								<box>
+									<pen lineWidth="1.0"/>
+									<topPen lineWidth="1.0"/>
+									<leftPen lineWidth="1.0"/>
+									<bottomPen lineWidth="1.0"/>
+									<rightPen lineWidth="0.0"/>
+								</box>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font isBold="false"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$V{valorMeasure}.toString()]]></textFieldExpression>
+							</textField>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="20" columnTotalGroup="vencimento">
+						<cellContents backcolor="#FFFFFF" mode="Opaque">
+							<box>
+								<pen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+								<topPen lineWidth="0.0"/>
+								<leftPen lineWidth="0.0"/>
+								<bottomPen lineWidth="0.0"/>
+								<rightPen lineWidth="0.0"/>
+							</box>
+							<textField isStretchWithOverflow="true">
+								<reportElement style="Crosstab Data Text" mode="Opaque" x="0" y="0" width="46" height="20" forecolor="#000000" backcolor="#E6E8FF"/>
+								<box>
+									<pen lineWidth="1.0"/>
+									<topPen lineWidth="1.0"/>
+									<leftPen lineWidth="1.0"/>
+									<bottomPen lineWidth="1.0"/>
+									<rightPen lineWidth="0.0"/>
+								</box>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font size="10" isBold="true"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$V{valorMeasure}.toString()]]></textFieldExpression>
+							</textField>
+							<staticText>
+								<reportElement mode="Opaque" x="46" y="0" width="4" height="20" forecolor="#000000" backcolor="#E6E8FF"/>
+								<box>
+									<topPen lineWidth="1.0"/>
+									<bottomPen lineWidth="1.0"/>
+									<rightPen lineWidth="1.0"/>
+								</box>
+								<textElement textAlignment="Right" verticalAlignment="Middle" markup="none">
+									<font size="7" isBold="false"/>
+								</textElement>
+								<text><![CDATA[]]></text>
+							</staticText>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="42" height="23" rowTotalGroup="covenios">
+						<cellContents backcolor="#FFFFFF">
+							<textField isStretchWithOverflow="true">
+								<reportElement style="Crosstab Data Text" mode="Opaque" x="0" y="0" width="42" height="23" forecolor="#000000" backcolor="#D4E8FF"/>
+								<box>
+									<pen lineWidth="1.0" lineColor="#000000"/>
+									<topPen lineWidth="1.0" lineColor="#000000"/>
+									<leftPen lineWidth="1.0" lineColor="#000000"/>
+									<bottomPen lineWidth="1.0" lineColor="#000000"/>
+									<rightPen lineWidth="1.0" lineColor="#000000"/>
+								</box>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font isBold="true"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$V{valorMeasure}.toString()]]></textFieldExpression>
+							</textField>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="23" rowTotalGroup="covenios" columnTotalGroup="vencimento">
+						<cellContents backcolor="#FFFFFF">
+							<textField isStretchWithOverflow="true">
+								<reportElement style="Crosstab Data Text" mode="Opaque" x="0" y="0" width="46" height="23" forecolor="#000000" backcolor="#D4E8FF"/>
+								<box>
+									<pen lineWidth="1.0"/>
+									<topPen lineWidth="1.0" lineColor="#000000"/>
+									<leftPen lineWidth="1.0" lineColor="#000000"/>
+									<bottomPen lineWidth="1.0" lineColor="#000000"/>
+									<rightPen lineWidth="0.0"/>
+								</box>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font size="10" isBold="true"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$V{valorMeasure}.toString()]]></textFieldExpression>
+							</textField>
+							<staticText>
+								<reportElement style="Crosstab Data Text" mode="Opaque" x="46" y="0" width="4" height="23" forecolor="#000000" backcolor="#D4E8FF"/>
+								<box>
+									<topPen lineWidth="1.0" lineColor="#000000"/>
+									<bottomPen lineWidth="1.0" lineColor="#000000"/>
+									<rightPen lineWidth="1.0" lineColor="#000000"/>
+								</box>
+								<textElement textAlignment="Right" verticalAlignment="Middle" markup="none">
+									<font size="8" isBold="false"/>
+								</textElement>
+								<text><![CDATA[]]></text>
+							</staticText>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="42" rowTotalGroup="socios">
+						<cellContents>
+							<textField isStretchWithOverflow="true">
+								<reportElement x="0" y="0" width="42" height="20" forecolor="#000000"/>
+								<box>
+									<pen lineWidth="1.0"/>
+									<topPen lineWidth="1.0"/>
+									<leftPen lineWidth="1.0"/>
+									<bottomPen lineWidth="1.0"/>
+									<rightPen lineWidth="0.0"/>
+								</box>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font isBold="false"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$V{valorMeasure}.toString()]]></textFieldExpression>
+							</textField>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" rowTotalGroup="socios" columnTotalGroup="vencimento">
+						<cellContents>
+							<textField isStretchWithOverflow="true">
+								<reportElement style="Crosstab Data Text" mode="Opaque" x="0" y="0" width="46" height="20" forecolor="#000000" backcolor="#D4E8FF"/>
+								<box>
+									<pen lineWidth="1.0"/>
+									<topPen lineWidth="1.0"/>
+									<leftPen lineWidth="1.0"/>
+									<bottomPen lineWidth="1.0"/>
+									<rightPen lineWidth="0.0"/>
+								</box>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font size="10" isBold="true"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$V{valorMeasure}.toString()]]></textFieldExpression>
+							</textField>
+							<staticText>
+								<reportElement mode="Opaque" x="46" y="0" width="4" height="20" forecolor="#000000" backcolor="#D4E8FF"/>
+								<box>
+									<topPen lineWidth="1.0"/>
+									<bottomPen lineWidth="1.0"/>
+									<rightPen lineWidth="1.0"/>
+								</box>
+								<textElement textAlignment="Right" verticalAlignment="Middle" markup="none">
+									<font size="7" isBold="false"/>
+								</textElement>
+								<text><![CDATA[]]></text>
+							</staticText>
+						</cellContents>
+					</crosstabCell>
+				</crosstab>
+			</elementGroup>
+		</band>
+	</summary>
+</jasperReport>

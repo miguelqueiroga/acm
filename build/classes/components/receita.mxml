@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" 
+	close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" 
+	title="Receita por Departamento" width="620" height="322"
+	xmlns:control="br.com.thinklab.util.control.*">
+	<mx:Script>
+		<![CDATA[
+			import entity.Receita;
+			import entity.ReceitaPorConvenio;
+			import entity.Departamento;
+			import entity.Vencimento;
+			import components.receitas;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			//import components.DecimalInput;
+			
+			private var vencimentoAtual: Vencimento;
+            
+			[Bindable]
+			public var receitasCollection:ArrayCollection; 
+            public var departamentos:ArrayCollection;
+            public var janelaReceitas:receitas;           
+            public var estaAlterando:Boolean;  
+            
+
+			public function init():void {
+				estaAlterando = false;
+				habilitaEdic(false);
+				habilitaAlter(false);				
+				listaDepartamentos();						
+			}
+			
+			public function setJanelaReceita(janela:receitas):void{
+				this.janelaReceitas = janela;
+				if(janelaReceitas.getReceitas() != null) {
+					this.receitasCollection = janelaReceitas.getReceitas();
+				}
+				else
+					receitasCollection = new ArrayCollection();  
+			}
+			
+			public function fecharJanela():void{
+				this.janelaReceitas.setReceitas(receitasCollection);
+				PopUpManager.removePopUp(this);
+			}
+			public function listaDepartamentos():void{
+				departamentoService.getList();				
+			}
+			
+			public function setVencimento(event:ResultEvent):void{
+				vencimentoAtual = (Vencimento)(event.result);										
+			}
+			
+			public function setDepartamentosCombo(event:ResultEvent):void{
+				departamentos = (ArrayCollection)(event.result);
+				departamentosCombo.dataProvider = departamentos;	
+				departamentos.sort = new Sort();
+                departamentos.sort.fields = [new SortField("depNome", false, false)];
+                departamentos.refresh();					
+			}
+			
+			public function carregaDados():void{
+				var i : int;
+				exames.text = dg.selectedItem.recQuantidadeExames;
+				valor.text = dg.selectedItem.recValorBruto;	
+				for ( i=0; i < departamentos.length; i++){
+					var cp3 : Departamento = (Departamento) (dg.selectedItem.recDepartamento);
+					var cp4 : Departamento = (Departamento) (departamentos.getItemAt(i));
+					if (cp3.depId == cp4.depId)
+						departamentosCombo.selectedIndex = i;
+				}
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					habilitaEdic(true);
+					carregaDados();
+					habilitaAlter(true);
+					departamentosCombo.setFocus();
+					estaAlterando = true;
+				}
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				departamentosCombo.enabled = hab;
+				exames.enabled = hab;
+				valor.enabled = hab;
+			}
+			
+			public function cancelaOper():void{
+				limpaCampos();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				carregaDados();
+			}
+			
+			public function criaNovo():void{
+				limpaCampos();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				departamentosCombo.setFocus();
+			}
+			
+			public function limpaCampos():void{
+				exames.text = "";
+				departamentosCombo.selectedIndex = -1;
+				valor.text = "0,00"; 
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				if (hab){
+					btnNovo.enabled = false;
+					btnAlterar.enabled = false;
+					btnSalvar.enabled = true;
+					btnCancelar.enabled = true;
+					btnRemover.enabled = false;
+					btnFechar.enabled = false;
+					pdg.enabled = false;
+				} else {
+					btnNovo.enabled = true;
+					btnAlterar.enabled = true;
+					btnSalvar.enabled = false;
+					btnCancelar.enabled = false;
+					btnRemover.enabled = true;
+					btnFechar.enabled = true;
+					pdg.enabled = true;					
+				}
+			}
+			
+			public function receitaGravado(event:ResultEvent):void{
+				Alert.show( "Receita salva com sucesso!");
+			}
+			
+			public function receitaRemovido(event:ResultEvent):void{
+				Alert.show( "Receita removida com sucesso!" );
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function getParameters():Receita{
+				var rec : Receita = new Receita();
+				rec.recQuantidadeExames = exames.text;
+				rec.recValorBruto = valor.text;
+				rec.recDepartamento = (Departamento) (departamentos.getItemAt(departamentosCombo.selectedIndex));
+				return rec;
+			}
+			
+			public function salvarReceita():void{
+				if (validar()) {
+					//TODO Verificar se está alterando
+					if(!estaAlterando) {
+						receitasCollection.addItem( this.getParameters() );
+						Alert.show("Departamento adicionado com sucesso!");
+					}
+					else {
+						var rec : Receita = (Receita) (receitasCollection.getItemAt(dg.selectedIndex));
+						rec.recQuantidadeExames = exames.text;
+						rec.recValorBruto = valor.text;
+						rec.recDepartamento = (Departamento) (departamentos.getItemAt(departamentosCombo.selectedIndex));
+						Alert.show("Departamento alterado com sucesso!");
+				 		estaAlterando = false;
+					}
+					limpaCampos();
+					habilitaEdic(false);
+					habilitaAlter(false);
+					
+				 }
+			}
+			
+			public function removerSelecionado():void{
+				 if (dg.selectedIndex >= 0) {
+					receitasCollection.removeItemAt( dg.selectedIndex );
+					limpaCampos();
+				 }
+				 else {
+				 	Alert.show("Selecione um Registro!");
+				 }
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.message);
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Array id="validadores">
+		
+		<mx:StringValidator source="{exames}" required="true" property="text"
+			requiredFieldError="Quantidade de exames não pode ser vazio."
+		/>
+		
+		<mx:StringValidator source="{valor}" required="true" property="text"
+			requiredFieldError="Valor não pode ser vazio."
+		/>
+		
+		<mx:NumberValidator source="{departamentosCombo}" lowerThanMinError="Escolha um Departamento." 
+			property="selectedIndex" minValue="0" 
+		/>
+		
+	</mx:Array>
+	
+	
+	<mx:RemoteObject id="departamentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="departamentoService">
+		<mx:method name="getList" fault="onFault(event)" result="setDepartamentosCombo(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:ComboBox dataProvider="{departamentos}" x="88" y="8" width="217" id="departamentosCombo" enabled="true" labelField="depNome">
+	</mx:ComboBox>
+	<mx:TextInput x="88" y="38" width="79" id="exames" maxChars="6" restrict="0-9"/>
+	<control:DecimalInput x="216" y="38" width="89" id="valor" currencyFormat="br" maxChars="10" text="0,00"/>
+	<mx:Label x="14" y="10" text="Departam."/>
+	<mx:Label x="175" y="40" text="Valor"/>
+	<mx:Label x="14" y="40" text="Nº exames"/>
+	<mx:Panel id="pdg" x="0" y="68" layout="absolute" title="Receitas Cadastradas" height="100%" width="100%">
+		<mx:DataGrid id="dg" dataProvider="{receitasCollection}" x="0" y="0" width="100%"
+			change="{carregaDados()}" height="100%" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Departamento" dataField="recDepartamento" labelFunction="propChainLabelFunction" width="80"/>
+				<mx:DataGridColumn headerText="Exames" dataField="recQuantidadeExames" width="30"/>												
+				<mx:DataGridColumn headerText="Valor" dataField="recValorBruto" width="50"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ControlBar height="56">
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarReceita()}"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')" click="{cancelaOper()}"/>
+		<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{fecharJanela()}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

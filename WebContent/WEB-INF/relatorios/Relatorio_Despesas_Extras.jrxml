@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Relatorio_Despesa" pageWidth="595" pageHeight="842" whenNoDataType="AllSectionsNoDetail" columnWidth="535" leftMargin="30" rightMargin="30" topMargin="20" bottomMargin="20">
+	<property name="ireport.scriptlethandling" value="0"/>
+	<property name="ireport.encoding" value="UTF-8"/>
+	<property name="ireport.zoom" value="1.5"/>
+	<property name="ireport.x" value="141"/>
+	<property name="ireport.y" value="176"/>
+	<import value="net.sf.jasperreports.engine.*"/>
+	<import value="java.util.*"/>
+	<import value="net.sf.jasperreports.engine.data.*"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String">
+		<defaultValueExpression><![CDATA[".\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="dataInicial" class="java.lang.String"/>
+	<parameter name="dataFinal" class="java.lang.String"/>
+	<parameter name="departamentos" class="java.lang.String"/>
+	<parameter name="categorias" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="venNome" class="java.lang.String">
+		<fieldDescription><![CDATA[despesaPorVencimento.dpvVencimento.venNomeFormatado]]></fieldDescription>
+	</field>
+	<field name="desNome" class="java.lang.String">
+		<fieldDescription><![CDATA[deDescricao]]></fieldDescription>
+	</field>
+	<field name="desValor" class="java.lang.String">
+		<fieldDescription><![CDATA[deValor]]></fieldDescription>
+	</field>
+	<field name="depNome" class="java.lang.String">
+		<fieldDescription><![CDATA[despesaPorVencimento.dpvDespesa.desDepartamento.depNome]]></fieldDescription>
+	</field>
+	<field name="obs" class="java.lang.String">
+		<fieldDescription><![CDATA[despesaPorVencimento.dpvDespesa.desNome]]></fieldDescription>
+	</field>
+	<variable name="somaDespesasExtras" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[Double.parseDouble($F{desValor}.replaceAll("\\.", "").replaceAll(",", "\\."))]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="57" splitType="Stretch">
+			<staticText>
+				<reportElement key="staticText-1" x="81" y="3" width="373" height="27" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="18" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[ACM]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-2" x="112" y="32" width="311" height="21" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="16" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Sistema de Controle Financeiro]]></text>
+			</staticText>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="100" splitType="Stretch">
+			<line>
+				<reportElement key="line-3" x="0" y="99" width="535" height="1" forecolor="#000000"/>
+			</line>
+			<staticText>
+				<reportElement key="staticText-3" x="112" y="47" width="304" height="19" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="14" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Relatório de Despesas Extras]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-13" x="3" y="76" width="128" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Descrição da Despesa]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-37" x="260" y="76" width="49" height="16" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Valor (R$)]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-39" x="315" y="76" width="133" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Departamento]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-30" x="454" y="76" width="75" height="15" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Vencimento]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="328" y="21" width="201" height="20"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<textFieldExpression class="java.lang.String"><![CDATA["Período: " + $P{dataInicial} + " à " + $P{dataFinal}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="3" y="21" width="312" height="20"/>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression class="java.lang.String"><![CDATA["Categoria (s): " + $P{categorias}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="3" y="1" width="527" height="20"/>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression class="java.lang.String"><![CDATA["Departamento (s): " + $P{departamentos}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="22" splitType="Prevent">
+			<elementGroup/>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-22" x="260" y="3" width="49" height="16"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{desValor}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement key="line-4" x="0" y="21" width="535" height="1" forecolor="#000000"/>
+			</line>
+			<line>
+				<reportElement key="line-5" x="0" y="0" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="534" y="-1" width="1" height="22"/>
+			</line>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-25" x="315" y="3" width="133" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{depNome}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-25" x="3" y="3" width="252" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{desNome}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-25" x="454" y="3" width="76" height="16"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{venNome}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement key="line-6" x="451" y="0" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="312" y="0" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="257" y="0" width="1" height="21"/>
+			</line>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band height="42" splitType="Stretch">
+			<staticText>
+				<reportElement key="staticText-11" x="2" y="7" width="271" height="15" forecolor="#000000"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="7" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Sistema de Acessoria em Contas Médicas]]></text>
+			</staticText>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-1" x="416" y="7" width="114" height="9"/>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif" size="7"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date())]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement key="staticText-12" x="2" y="22" width="290" height="17" forecolor="#3366FF"/>
+				<textElement>
+					<font fontName="SansSerif" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[CAMPINATEC - Serviços e Soluções em TI]]></text>
+			</staticText>
+			<line>
+				<reportElement key="line-1" x="1" y="4" width="535" height="1" forecolor="#000000"/>
+			</line>
+			<textField evaluationTime="Report">
+				<reportElement x="493" y="20" width="40" height="20"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="413" y="20" width="80" height="20"/>
+				<textElement textAlignment="Right">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<lastPageFooter>
+		<band height="81">
+			<staticText>
+				<reportElement key="staticText-11" x="1" y="46" width="271" height="15" forecolor="#000000"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="7" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Sistema de Acessoria em Contas Médicas]]></text>
+			</staticText>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-1" x="415" y="46" width="114" height="9"/>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif" size="7"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date())]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement key="staticText-12" x="1" y="61" width="290" height="17" forecolor="#3366FF"/>
+				<textElement>
+					<font fontName="SansSerif" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[CAMPINATEC - Serviços e Soluções em TI]]></text>
+			</staticText>
+			<line>
+				<reportElement key="line-1" x="0" y="43" width="535" height="1" forecolor="#000000"/>
+			</line>
+			<staticText>
+				<reportElement x="273" y="3" width="195" height="20"/>
+				<textElement textAlignment="Justified" verticalAlignment="Middle">
+					<font size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Total de despesas extras para o período:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="468" y="3" width="61" height="20"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="9" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[new java.text.DecimalFormat("R$ #,##0.00", new java.text.DecimalFormatSymbols (new java.util.Locale ("pt", "BR"))).format($V{somaDespesasExtras})]]></textFieldExpression>
+			</textField>
+		</band>
+	</lastPageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

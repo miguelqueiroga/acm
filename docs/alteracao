@@ -1,0 +1,29 @@
+DROP TABLE IF EXISTS `receita_avulsa`;
+CREATE TABLE `acm`.`receita_avulsa` (
+  `RA_ID` INT(11) NOT NULL AUTO_INCREMENT,
+  `RA_NOME` VARCHAR(100) NOT NULL,
+  `RA_VALOR` VARCHAR(100) NOT NULL,
+  `RA_VENCIMENTO` INT(11) NOT NULL,
+  PRIMARY KEY (`RA_ID`),
+  CONSTRAINT `FK_receita_avulsa_vencimento` FOREIGN KEY `FK_receita_avulsa_vencimento` (`RA_VENCIMENTO`)
+    REFERENCES `vencimento` (`VEN_ID`)
+    ON DELETE RESTRICT
+    ON UPDATE RESTRICT
+)
+ENGINE = InnoDB;
+
+DROP TABLE IF EXISTS `acm`.`receita_avulsa_socio`;
+CREATE TABLE  `acm`.`receita_avulsa_socio` (
+  `RAS_ID` int(11) NOT NULL AUTO_INCREMENT,
+  `RAS_RECEITA_AVULSA` int(11) NOT NULL,
+  `RAS_SOCIO` int(11) NOT NULL,
+  PRIMARY KEY (`RAS_ID`),
+  CONSTRAINT `FK_receita_avulsa_socio_receita_avulsa` FOREIGN KEY `FK_receita_avulsa_socio_receita_avulsa` (`RAS_RECEITA_AVULSA`)
+    REFERENCES `receita_avulsa` (`RA_ID`)
+    ON DELETE RESTRICT
+    ON UPDATE RESTRICT,
+  CONSTRAINT `FK_receita_avulsa_socio_socio` FOREIGN KEY `FK_receita_avulsa_socio_socio` (`RAS_SOCIO`)
+    REFERENCES `socio` (`SOC_ID`)
+    ON DELETE RESTRICT
+    ON UPDATE RESTRICT
+) ENGINE=InnoDB;

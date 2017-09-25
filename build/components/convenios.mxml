@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" 
+	close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" 
+	title="Convênio do Sistema" width="616" height="364">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import entity.Socio;
+			import entity.Departamento;
+			import entity.Convenio;
+			import entity.ContaPagamento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			
+			[Bindable]
+			public var lista:ArrayCollection; 
+            public var idSelecionado:int = 0; 
+            [Bindable]
+			public var contas:ArrayCollection; 
+            private var estaAdicionando:Boolean;
+            
+
+			public function init():void{
+				listaConvenios();
+				estaAdicionando = false;
+				listaContas();				
+			}
+			
+			public function listaConvenios():void{
+				convenioService.getList();
+			}
+			
+			public function listaContas():void{
+				contaPagamentoService.getList();				
+			}
+			
+			public function hrdpGrid(event:ResultEvent):void{
+				lista = (ArrayCollection)(event.result);
+				lista.sort = new Sort();
+                lista.sort.fields = [new SortField("conNome", false, false)];
+                lista.refresh();
+
+			}
+			
+			public function contasCombo(event:ResultEvent):void{
+				contas = (ArrayCollection)(event.result);
+				contaCombo.dataProvider = contas;	
+				contas.sort = new Sort();
+                contas.sort.fields = [new SortField("cpNome", false, false)];
+                contas.refresh();					
+			}
+			
+			public function carregaDados():void{
+				if(lista.length > 0) {
+					if(dg.selectedIndex < 0)
+						dg.selectedIndex = 0;
+					var i : int;
+					var j : int;
+					idSelecionado = dg.selectedItem.conId;
+					nome.text = dg.selectedItem.conNome;
+					pagamento.selected = dg.selectedItem.conPagoAVista == "SIM" ? true : false;	
+					for ( i=0; i < contas.length; i++){
+						var cp : ContaPagamento = (ContaPagamento) (dg.selectedItem.conContaPagamento);
+						var cp2 : ContaPagamento = (ContaPagamento) (contas.getItemAt(i));
+						if (cp.cpId == cp2.cpId)
+							contaCombo.selectedIndex = i;
+					}
+				}							
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					habilitaValidadores(true);
+					habilitaEdic(true);
+					carregaDados();
+					habilitaAlter(true);
+					nome.setFocus();
+				}
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				nome.enabled = hab;
+				pagamento.enabled = hab;
+				contaCombo.enabled = hab;		
+				//pagamento.enabled = hab;	
+				//sociosCombo.enabled = hab;	
+			}
+			
+			public function cancelaOper():void{
+				limpaCampos();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				carregaDados();
+				habilitaValidadores(false);					
+			}
+			
+			public function criaNovo():void{
+				habilitaValidadores(true);
+				limpaCampos();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				nome.setFocus();			
+				estaAdicionando = true;
+			}
+			
+			public function limpaCampos():void{
+				idSelecionado = 0;
+				nome.text = "";
+				pagamento.selected = false;
+				contaCombo.selectedIndex = -1; 
+				estaAdicionando = false;
+				//sociosCombo.selectedIndex = -1;				
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				btnNovo.enabled = !hab;
+				btnAlterar.enabled = !hab;
+				btnSalvar.enabled = hab;
+				btnCancelar.enabled = hab;
+				btnRemover.enabled = !hab;
+				btnFechar.enabled = !hab;
+				pdg.enabled = !hab;			
+			}
+			
+			public function habilitaValidadores(hab:Boolean):void{
+				validadorNome.enabled = hab;	
+			}
+			
+			public function convenioGravado(event:ResultEvent):void{
+				/* habilitaValidadores(false);
+				limpaCampos();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				listaConvenios(); */
+				habilitaEdic(false);
+				habilitaAlter(false);
+			 	habilitaValidadores(false);
+				if(!estaAdicionando){ 
+					var con:Convenio = event.result as Convenio;
+					var conAntigo:Convenio = lista.getItemAt(dg.selectedIndex) as Convenio;
+					conAntigo = con;
+					dg.setFocus();	
+					if(dg.selectedIndex < lista.length)
+						dg.selectedIndex = dg.selectedIndex + 1;		
+					carregaDados();			
+				}
+				else {
+					lista.addItem(event.result as Convenio);
+					estaAdicionando = false;
+				}
+				Alert.show( "Convênio salvo com sucesso!" );				
+			}
+			
+			public function convenioRemovido(event:ResultEvent):void{
+				limpaCampos();
+				listaConvenios();
+				Alert.show( "Convênio removido com sucesso!");				
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function getParameters():Convenio{
+				var con : Convenio = null;
+				if(!estaAdicionando){
+					con = (Convenio) (lista.getItemAt(dg.selectedIndex));
+				}
+				else {
+					con = new Convenio();	
+				}
+				con.conId = idSelecionado;
+				con.conNome = nome.text;
+				con.conPagoAVista = pagamento.selected == true ? "SIM" : "NÃO";
+				con.conContaPagamento = (ContaPagamento) (contaCombo.selectedItem);				
+				//con.conSocio = (Socio) (sociosCombo.selectedItem);				
+				return con;
+			}
+			
+			public function salvarConvenio():void{
+				 if (validar()){
+				 	if (Application.application.isAdministrador()) {
+						convenioService.save( this.getParameters() );
+				 	}
+				 	else {
+				 		Alert.show("Você não possui permissão \npara salvar registros!");
+				 	}
+				 }
+			}
+			
+			public function removerSelecionado():void{
+				Alert.yesLabel = "Sim";
+			  	Alert.noLabel = "Não";
+			  	Alert.show("Deseja remover este Convênio?","Remover", Alert.YES | Alert.NO, this, confirmaRemocao);				 
+			}
+			
+			public function confirmaRemocao(event:CloseEvent):void{
+				if (event.detail==Alert.YES) {
+					if(dg.selectedIndex >= 0){
+						if(Application.application.isAdministrador()){
+							convenioService.remove( this.getParameters() );
+						}
+						else {
+							Alert.show("Você não possui permissão \npara remover este registro!");
+						}
+					}
+					else {
+				 		Alert.show("Selecione um Registro!");
+				 	}			
+				}
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.rootCause.localizedMessage, "OCORREU UM ERRO");
+			}
+			
+			public function validate(v:Validator):void{
+				v.validate();								
+			}
+			
+			public function upperCampo(campo : TextInput):void {
+				var comparador: String = "àãõâêôáéíóúç";
+				var texto: String = campo.text;
+				var posicao: int = campo.selectionBeginIndex - 1;
+				var caracter: String = texto.charAt(posicao);
+				
+				if (comparador.indexOf(caracter) != -1){
+					var strCampo: String = campo.text;
+					campo.text = strCampo.toUpperCase();
+					campo.selectionBeginIndex = posicao+1;
+					campo.selectionEndIndex = posicao+1;
+				}				
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                if(currentItem == null)
+                	return "";
+                return currentItem.toString();
+            }
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Array id="validadores">
+		
+		<mx:StringValidator id="validadorNome" source="{nome}" minLength="2" required="true" property="text"
+			requiredFieldError="Nome não pode ser vazio." tooShortError="Nome deve ter no mínimo 2 caracteres."
+		/>
+		
+ 	</mx:Array>
+	
+	<mx:RemoteObject id="convenioService" showBusyCursor="true"
+		fault="onFault(event)" destination="convenioService">
+		<mx:method name="save" fault="onFault(event)" result="convenioGravado(event)">
+			<mx:arguments>
+	            <commandArgs>{Convenio}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="remove" fault="onFault(event)" result="convenioRemovido(event)">
+			<mx:arguments>
+	            <commandArgs>{Convenio}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="getList" fault="onFault(event)" result="hrdpGrid(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="contaPagamentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="contaPagamentoService">
+		<mx:method name="getList" fault="onFault(event)" result="contasCombo(event)"/>            		
+	</mx:RemoteObject>
+	
+	
+	<mx:Label x="10" y="12" text="Nome"/>
+	<mx:Label x="153" y="42" text="Conta"/>
+	<mx:TextInput x="62" y="10" width="451" id="nome" enabled="false" maxChars="40"  restrict="[A-Z \- \\ ÀÃÕÂÊÔÁÉÍÓÚÇ àãõâêôáéíóúç]" change="validate(validadorNome); upperCampo(this.nome)"/>
+	<mx:ComboBox dataProvider="{contas}" x="199" y="40" width="314" id="contaCombo" enabled="false" labelField="toString()">
+	</mx:ComboBox>
+	<mx:Panel id="pdg" x="0" y="68" layout="absolute" title="Convênio Cadastrados" height="213" width="99%">
+		<mx:DataGrid id="dg" dataProvider="{lista}" x="0" y="0" width="100%"
+			change="{carregaDados()}" height="100%" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Nome" dataField="conNome" width="200"/>
+				<mx:DataGridColumn headerText="Pag. à Vista" dataField="conPagoAVista" width="70"/>
+				<mx:DataGridColumn headerText="Conta" dataField="conContaPagamento" labelFunction="propChainLabelFunction" width="200"/>
+				<!--mx:DataGridColumn headerText="Sócio" dataField="conSocio" labelFunction="propChainLabelFunction" width="100"/-->
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:CheckBox x="10" y="40" label="Pagamento à Vista" width="135" id="pagamento" enabled="false" selected="false"/>
+	<mx:ControlBar height="50" y="334">
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarConvenio()}"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')" click="{cancelaOper()}"/>
+		<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+</mx:TitleWindow>

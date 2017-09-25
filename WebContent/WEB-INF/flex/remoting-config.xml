@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<service id="remoting-service"
+	class="flex.messaging.services.RemotingService">
+
+	<adapters>
+		<adapter-definition id="java-object"
+			class="flex.messaging.services.remoting.adapters.JavaAdapter"
+			default="true" />
+	</adapters>
+
+	<default-channels>
+		<channel ref="channel-amf" />	
+	</default-channels>
+
+	<destination id="usuarioService">
+		<properties>
+			<factory>spring</factory>
+            <source>usuarioService</source>
+		</properties>
+	</destination>
+
+	<destination id="socioService">
+		<properties>
+			<factory>spring</factory>
+            <source>socioService</source>
+		</properties>
+	</destination>
+
+	<destination id="departamentoService">
+		<properties>
+			<factory>spring</factory>
+            <source>departamentoService</source>
+		</properties>
+	</destination>
+
+	<destination id="convenioService">
+		<properties>
+			<factory>spring</factory>
+            <source>convenioService</source>
+		</properties>
+	</destination>
+
+	<destination id="contaPagamentoService">
+		<properties>
+			<factory>spring</factory>
+            <source>contaPagamentoService</source>
+		</properties>
+	</destination>
+	
+	<destination id="despesaService">
+		<properties>
+			<factory>spring</factory>
+            <source>despesaService</source>
+		</properties>
+	</destination>
+	
+	<destination id="despesaPorVencimentoService">
+		<properties>
+			<factory>spring</factory>
+            <source>despesaPorVencimentoService</source>
+		</properties>
+	</destination>
+	
+	<destination id="categoriaDespesaService">
+		<properties>
+			<factory>spring</factory>
+            <source>categoriaDespesaService</source>
+		</properties>
+	</destination>
+	
+	<destination id="vencimentoService">
+		<properties>
+			<factory>spring</factory>
+            <source>vencimentoService</source>
+		</properties>
+	</destination>
+	
+	<destination id="receitaService">
+		<properties>
+			<factory>spring</factory>
+            <source>receitaService</source>
+		</properties>
+	</destination>
+	
+	<destination id="receitaPorConvenioService">
+		<properties>
+			<factory>spring</factory>
+            <source>receitaPorConvenioService</source>
+		</properties>
+	</destination>
+	
+	<destination id="sistemaService">
+		<properties>
+			<factory>spring</factory>
+            <source>sistemaService</source>
+		</properties>
+	</destination>
+	
+	<destination id="departamentoDepartamentoService">
+		<properties>
+			<factory>spring</factory>
+            <source>departamentoDepartamentoService</source>
+		</properties>
+	</destination>
+	
+	<destination id="departamentoSocioService">
+		<properties>
+			<factory>spring</factory>
+            <source>departamentoSocioService</source>
+		</properties>
+	</destination>
+	
+	<destination id="despesaExtraService">
+		<properties>
+			<factory>spring</factory>
+            <source>despesaExtraService</source>
+		</properties>
+	</destination>
+	
+	<destination id="aplicacaoService">
+		<properties>
+			<factory>spring</factory>
+            <source>aplicacaoService</source>
+		</properties>
+	</destination>
+	
+	<destination id="resgateService">
+		<properties>
+			<factory>spring</factory>
+            <source>resgateService</source>
+		</properties>
+	</destination>
+	
+	<destination id="retiradaService">
+		<properties>
+			<factory>spring</factory>
+            <source>retiradaService</source>
+		</properties>
+	</destination>
+	
+	<destination id="relatorioService">
+		<properties>
+			<factory>spring</factory>
+            <source>relatorioService</source>
+		</properties>
+	</destination>
+	
+	<destination id="receitaAvulsaService">
+		<properties>
+			<factory>spring</factory>
+            <source>receitaAvulsaService</source>
+		</properties>
+	</destination>
+	
+	<destination id="receitaAvulsaSocioService">
+		<properties>
+			<factory>spring</factory>
+            <source>receitaAvulsaSocioService</source>
+		</properties>
+	</destination>
+	
+	
+	
+</service>

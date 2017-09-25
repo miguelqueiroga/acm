@@ -1,0 +1,466 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="absolute" title="Retiradas das Sócias" width="744" height="358" 
+	xmlns:control="br.com.thinklab.util.control.*"
+	xmlns:jrv="com.jaspersoft.reports.viewer.*">
+	
+	<mx:Script>
+		<![CDATA[
+			import entity.Socio;
+			import entity.Retirada;
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import entity.util.CriterioDePesquisa;
+			import entity.util.ConsultaPorCriterios;
+			import entity.util.CriterioDePesquisaComparacaoNumero;
+			import entity.util.CriterioDePesquisaComparacaoString;
+			import mx.messaging.channels.HTTPChannel;
+			import mx.rpc.http.HTTPService;
+			import mx.events.ResizeEvent;
+			import entity.Aplicacao;
+			import entity.Aplicacao;
+			import entity.Departamento;
+			import entity.Vencimento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			
+			import flash.net.URLRequest;
+			import flash.net.URLRequestMethod;
+			import flash.net.URLVariables;
+			import flash.net.navigateToURL;
+			import flash.utils.getTimer;
+			
+			
+			//import components.DecimalInput;
+			
+			private var vencimentoAtual: Vencimento;
+			private var estaAdicionando:Boolean;
+            
+			[Bindable]
+			
+			public var retiradaCollection:ArrayCollection; 
+            [Bindable]
+			public var socios:ArrayCollection; 
+            [Bindable]
+			public var vencimentos:ArrayCollection;
+            
+            public static const millisecondsPerDay :int = 1000 * 60 * 60 * 24;
+
+			public function init():void{
+				this.dg.addEventListener(KeyboardEvent.KEY_DOWN,checkKeyTabela);
+			  	this.valor.addEventListener(KeyboardEvent.KEY_DOWN,checkKeyValor);
+			  	
+			  	habilitaValidadores(false);
+				listaSocios();				
+				carregaVencimento();
+				estaAdicionando = false;
+				dg.setFocus();
+				dg.selectedIndex = 0;
+			}
+			
+			public function carregaVencimento():void{
+				vencimentoService.getList();
+			}
+			
+			public function listaAplicacoes():void{
+				//Alert.show(vencimentosCombo.selectedIndex+"");
+				if(vencimentosCombo.selectedIndex >= 0 && !valor.enabled){
+					vencimentoAtual = vencimentosCombo.selectedItem as Vencimento;
+					retiradaService.getListPorVencimento(vencimentoAtual);
+				}					
+			}
+			
+			public function listaSocios():void{
+				socioService.getList();				
+			}
+			
+			public function hrdpGrid(event:ResultEvent):void{
+				retiradaCollection = (ArrayCollection)(event.result);
+				dg.dataProvider = retiradaCollection;
+				retiradaCollection.sort = new Sort();
+                retiradaCollection.sort.fields = [new SortField("retVencimento", false, false)];
+                retiradaCollection.refresh();
+				
+			}
+			
+			public function setSociosCombo(event:ResultEvent):void{
+				socios = (ArrayCollection)(event.result);
+				sociosCombo.dataProvider = socios;
+				socios.sort = new Sort();
+                socios.sort.fields = [new SortField("socNome", false, false)];
+                socios.refresh();						
+			}
+			
+			public function setVencimentos(event:ResultEvent):void{
+				vencimentos = (ArrayCollection)(event.result);
+				vencimentosCombo.dataProvider = vencimentos;	
+				vencimentosCombo.selectedIndex = -1;						
+			}
+			
+			public function carregaDados():void{
+				if(retiradaCollection.length > 0) {
+					if(dg.selectedIndex < 0)
+						dg.selectedIndex = 0;
+					var i : int;
+					//var dpv:Aplicacao = dg.selectedItem as Aplicacao; 
+					valor.text = dg.selectedItem.retValor;
+					var myDate:String = dg.selectedItem.retData;
+					var d:Date = new Date(myDate);
+					data.selectedDate = new Date(d.fullYear,d.month, d.date);
+					for ( i=0; i < socios.length; i++){
+						var s : Socio = (Socio) (dg.selectedItem.socio);
+						var s2 : Socio = (Socio) (socios.getItemAt(i));
+						if (s.socId == s2.socId)
+							sociosCombo.selectedIndex = i;
+					}
+					for ( i=0; i < vencimentos.length; i++){
+						var v : Vencimento = (Vencimento) (dg.selectedItem.vencimento);
+						var v2 : Vencimento = (Vencimento) (vencimentos.getItemAt(i));
+						if (v.venId == v2.venId)
+							vencimentosCombo.selectedIndex = i;
+					}
+				}	
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					habilitaValidadores(true);
+					habilitaEdic(true);
+					carregaDados();
+					habilitaAlter(true);
+					valor.setFocus();
+				}
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				valor.enabled = hab;
+				sociosCombo.enabled = hab;
+				//vencimentosCombo.enabled = hab;
+				data.enabled = hab;
+			}
+			
+			public function cancelaOper():void{
+				limpaCampos();
+				carregaDados();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				habilitaValidadores(false);	
+			}
+			
+			public function criaNovo():void{
+				habilitaValidadores(true);
+				limpaCampos();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				valor.setFocus();				
+				estaAdicionando = true;
+			}
+			
+			public function limpaCampos():void{
+				valor.text = "";
+				sociosCombo.selectedIndex = -1;
+				vencimentosCombo.selectedIndex = -1;
+				estaAdicionando = false;
+				data.selectedDate = new Date();
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				btnNovo.enabled = !hab;
+				btnAlterar.enabled = !hab;
+				btnSalvar.enabled = hab;
+				btnCancelar.enabled = hab;
+				btnRemover.enabled = !hab;
+				btnFechar.enabled = !hab;
+				pdg.enabled = !hab;
+			}
+			
+			public function habilitaValidadores(hab:Boolean):void{
+				validadorComboSocio.enabled = hab;
+				validadorComboVencimento.enabled = hab;
+				validadorData.enabled = hab;
+				validadorValor.enabled = hab;	
+			}
+			
+			public function retiradaGravado(event:ResultEvent):void{
+				habilitaEdic(false);
+				habilitaAlter(false);
+			 	habilitaValidadores(false);
+				if(!estaAdicionando){ 
+					var ret:Retirada = event.result as Retirada;
+					var retAntigo:Retirada = retiradaCollection.getItemAt(dg.selectedIndex) as Retirada;
+					retAntigo = ret;
+					dg.setFocus();	
+					if(dg.selectedIndex < retiradaCollection.length){
+						dg.selectedIndex = dg.selectedIndex + 1;		
+					}
+					carregaDados();			
+				}
+				else {
+					estaAdicionando = false;
+					vencimentosCombo.selectedItem = (event.result as Retirada).vencimento;
+				}
+				Alert.show( "Retirada salva com sucesso!");
+			}
+			
+			public function retiradaRemovido(event:ResultEvent):void{
+				limpaCampos();
+				listaAplicacoes();
+				Alert.show( "Retirada removida com sucesso!" );				
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function getParameters():Retirada{
+				var ret : Retirada = null;
+				if(!estaAdicionando){
+					ret = (Retirada) (retiradaCollection.getItemAt(dg.selectedIndex));
+				}
+				else {
+					ret = new Retirada();
+					if(retiradaCollection != null)
+						retiradaCollection.addItem(ret);	
+				}
+				ret.retValor = valor.text;
+				ret.vencimento = vencimentosCombo.selectedItem as Vencimento;
+				ret.socio = (Socio)(sociosCombo.selectedItem);	
+				var d:Date = new Date(data.selectedDate.fullYear,data.selectedDate.month, data.selectedDate.date);
+				ret.retData = d;			
+				return ret;
+			}
+			
+			public function salvarAplicacao():void{
+				 if (validar()){
+				 	if(Application.application.isAdministrador()) {
+						retiradaService.save( this.getParameters());
+				 	}
+				 	else {
+				 		Alert.show("Você não possui permissão \npara salvar registros!");
+				 	}				 		
+				 }
+			}
+			
+			public function removerSelecionado():void{
+				Alert.yesLabel = "Sim";
+			  	Alert.noLabel = "Não";
+			  	Alert.show("Deseja remover esta Retirada?","Remover", Alert.YES | Alert.NO, this, confirmaRemocao);				 
+			}
+			
+			public function confirmaRemocao(event:CloseEvent):void{
+				if (event.detail==Alert.YES) {
+					if(dg.selectedIndex >= 0){
+						if(Application.application.isAdministrador()){
+							retiradaService.remove( this.getParameters() );
+						}
+						else {
+							Alert.show("Você não possui permissão \npara remover este registro!");
+						}
+					}
+					else {
+				 		Alert.show("Selecione um Registro!");
+				 	}			
+				}
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.rootCause.localizedMessage, "OCORREU UM ERRO");
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+            
+            public function validate(v:Validator):void{
+				v.validate();								
+			}
+			
+			public function checkKeyTabela(event:KeyboardEvent):void {
+            	if(btnSalvar.enabled == false && event.charCode == 13){
+                	alterar();
+                	valor.focusEnabled = true;
+                	valor.selectionBeginIndex = 0;
+                	valor.selectionEndIndex = valor.text.length;
+                }                	
+            } 
+			
+			public function checkKeyValor(event:KeyboardEvent):void {
+                if(btnSalvar.enabled == true && event.charCode == 13){
+                	salvarAplicacao();                	
+                }
+            }
+			
+			public static function stringToDate(data:String):Date{
+				if (data != "") {
+					var novaData:String = data.substring(3,5) +"/"+ data.substring(0,2) +"/"+ data.substring(6,10);
+					return new Date(novaData);
+				} else {
+					return null;
+				}
+			}
+            
+            private function formatDate(item:Object, column:DataGridColumn):String { 
+    			return dateFormatter.format(item[column.dataField]); 
+			} 
+			
+			public function alterarData(event:KeyboardEvent):void{
+				var d:Date = new Date(data.selectedDate); 
+				if(event.keyCode == Keyboard.LEFT){
+					d = new Date(data.selectedDate.getTime() - (1 * millisecondsPerDay));
+				} else if(event.keyCode == Keyboard.RIGHT){
+					d = new Date(data.selectedDate.getTime() + (1 * millisecondsPerDay));
+				} else if(event.keyCode == Keyboard.DOWN){
+					d = new Date(data.selectedDate.getTime() - (1 * millisecondsPerDay));
+				} else if(event.keyCode == Keyboard.UP){
+					d = new Date(data.selectedDate.getTime() + (1 * millisecondsPerDay));
+				}
+				data.selectedDate = new Date(d.fullYear,d.month, d.date);
+			}
+			
+			private function selecionaTexto(input: TextInput) :void {
+		    	input.selectionBeginIndex = 0;
+		    	input.selectionBeginIndex = input.text.length;
+		    }
+			
+		]]>
+	</mx:Script>
+	
+	<!--mx:String id="context" source="@Embed(source='../relatorios/Relatorio_Aplicacaos.jasper')"/-->
+	
+	<mx:NumberFormatter id="moedaFormat"
+        decimalSeparatorFrom=","
+	    decimalSeparatorTo=","
+	    precision="2"
+	    rounding="none"
+	    thousandsSeparatorFrom="."
+	    thousandsSeparatorTo="."
+	    useNegativeSign="true"
+	    useThousandsSeparator="true" 
+    />
+    
+    <mx:Array id="validadores">
+		
+		<mx:StringValidator id="validadorValor" source="{valor}" required="true" property="text"
+			requiredFieldError="Valor não pode ser vazio."
+		/>
+		
+		<mx:NumberValidator id="validadorComboSocio" source="{sociosCombo}" lowerThanMinError="Escolha um Sócio." 
+			property="selectedIndex" minValue="0" 
+		/>
+		
+		<mx:NumberValidator id="validadorComboVencimento" source="{vencimentosCombo}" lowerThanMinError="Escolha um Vencimento." 
+			property="selectedIndex" minValue="0" 
+		/>
+		
+		<mx:StringValidator id="validadorData" source="{data}" minLength="10" required="true" property="text"
+			requiredFieldError="A data da aplicação deve ser informada." tooShortError="Data deve ser informada."
+		/>
+	</mx:Array>
+	
+	<mx:RemoteObject id="retiradaService" showBusyCursor="true"
+		fault="onFault(event)" destination="retiradaService">
+		<mx:method name="save" fault="onFault(event)" result="retiradaGravado(event)">
+			<mx:arguments>
+	            <commandArgs>{Retirada}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="remove" fault="onFault(event)" result="retiradaRemovido(event)">
+			<mx:arguments>
+	            <commandArgs>{Retirada}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="getListPorVencimento" fault="onFault(event)" result="hrdpGrid(event)">
+    		<mx:arguments>
+	            <commandArgs>{Vencimento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="socioService" showBusyCursor="true"
+		fault="onFault(event)" destination="socioService">
+		<mx:method name="getList" fault="onFault(event)" result="setSociosCombo(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="vencimentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="vencimentoService">
+		<mx:method name="getList" fault="onFault(event)" result="setVencimentos(event)"/>            		
+	</mx:RemoteObject>
+	<mx:DateFormatter id="dateFormatter" formatString="DD/MM/YYYY"/> 
+	<mx:Label x="536" y="12" text="Sócio"/>
+	<mx:Label x="372" y="12" text="Data"/>
+	<mx:Label x="10" y="12" text="Vencimento"/>
+	<mx:ComboBox dataProvider="{vencimentos}" x="88" y="10" width="108" id="vencimentosCombo" labelField="toString()"  change="{validate(validadorComboVencimento);listaAplicacoes()}">
+	</mx:ComboBox>
+	<mx:Label x="204" y="12" text="Valor (R$)"/>
+	<mx:TextInput x="274" y="10" width="80" id="valor" enabled="false" maxChars="9" focusIn="selecionaTexto(valor)">
+		<mx:focusOut>
+	 		<![CDATA[
+	 			if(valor.text == "")
+		    		valor.text = "0,00"
+		    	else if(valor.text != "0,00") 
+		    		this.valor.text = moedaFormat.format(this.valor.text);
+	 			validate(validadorValor);
+	 		]]>
+	 	</mx:focusOut>
+	</mx:TextInput>
+	<mx:ComboBox dataProvider="{socios}" x="578" y="10" width="136" id="sociosCombo" enabled="false" labelField="desNome" change="{listaAplicacoes()}">
+	</mx:ComboBox>
+	<mx:Panel id="pdg" x="0" y="52" layout="absolute" title="Retiradas Cadastradas" height="218" width="100%">
+		<mx:DataGrid id="dg" dataProvider="{retiradaCollection}" x="0" y="0" width="100%"
+			change="{carregaDados()}" height="178" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Sócio" dataField="socio" width="160"/>
+				<mx:DataGridColumn headerText="Valor" dataField="retValor" width="80"/>
+				<mx:DataGridColumn headerText="Venc." dataField="vencimento" width="80"/>
+				<mx:DataGridColumn headerText="Data" dataField="retData" labelFunction="formatDate" width="80"/>				
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:DateField x="411" y="10" width="117" enabled="false" id="data" formatString="DD/MM/YYYY" yearNavigationEnabled="true" text="{dateFormatter.format(new Date())}" change="validadorData.validate();"/>
+	<mx:ControlBar height="56">
+		<mx:Button label="Button" width="35" visible="false"/>
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarAplicacao()}"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')" click="{cancelaOper()}"/>
+		<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+	
+</mx:TitleWindow>

@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" title="Despesas da Empresa por Departamento" 
+	width="908" height="612" xmlns:components="components.*" scroll="true">
+	<mx:Script>
+		<![CDATA[
+			import entity.DespesaPorVencimento;
+			import entity.util.CriterioDePesquisaIntervalo;
+			import entity.CategoriaDespesa;
+			import entity.util.CriterioDePesquisaComparacaoNumero;
+			import entity.util.CriterioDePesquisaOR;
+			import entity.util.CriterioDePesquisa;
+			import mx.events.CollectionEvent;
+			import entity.DepartamentoSocio;
+			import entity.Socio;
+			import entity.Departamento;
+			import entity.Despesa;
+			import entity.DepartamentoDepartamento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			
+			
+			[Bindable]
+			private var dateInicial:Date = new Date(2010, 01, 01);
+            [Bindable]
+			private var dateFinal:Date = new Date(2010, 01, 01);
+            
+            [Bindable]
+			public var socios:ArrayCollection;
+            [Bindable]
+			public var departamentosSocios:ArrayCollection;
+            [Bindable]
+			public var despesas:ArrayCollection;
+            [Bindable]
+			public var despesasIndiretas:ArrayCollection;
+            
+            public function init():void{
+				listaSocios();						
+            }
+			
+			public function listaSocios():void{
+				socioService.getList();
+			}
+						
+			public function carregaSocios(event:ResultEvent):void{
+				socios = (ArrayCollection)(event.result);
+			}
+			
+			public function carregaDepartamentosSocios(event:ResultEvent):void{
+				departamentosSocios = (ArrayCollection)(event.result);
+				realizaConsultaDespesasDiretas();
+				realizaConsultaDespesasIndiretas();
+			}
+			
+			public function limpaCampos():void{
+				//nome.text = "";
+			}
+			
+			public function getMesFormatado(mes:int):String{
+				return ((mes < 9) ? "0" : "") + (mes + 1);
+			}
+			
+			public function realizaConsulta():void{
+				departamentoService.getListPorSocio(sociosCombo.selectedItem as Socio);						
+			}
+			
+			public function realizaConsultaDespesasDiretas():void{
+				var criterios:ArrayCollection = new ArrayCollection();
+				var i:int;
+				var criterioIntervalo:CriterioDePesquisaIntervalo = new CriterioDePesquisaIntervalo();
+				criterioIntervalo.criterio = "dpvVencimento.venNome";
+				criterioIntervalo.valorInicial = (getMesFormatado(dataInicial.displayedYear) + "/" + dataInicial.displayedMonth);
+				criterioIntervalo.valorFinal = (getMesFormatado(dataFinal.displayedYear) + "/" + dataFinal.displayedMonth);
+				criterios.addItem(criterioIntervalo);
+				var socio:Socio = (Socio)(sociosCombo.selectedItem);
+				var criteriosDepartamento:ArrayCollection = new ArrayCollection();					
+				var criterioOR:CriterioDePesquisaOR = new CriterioDePesquisaOR();
+				for each (var dep : Departamento in departamentosSocios){
+					var cp:CriterioDePesquisaComparacaoNumero = new CriterioDePesquisaComparacaoNumero();
+					cp.criterio = "dpvDespesa.desDepartamento.depId";
+					cp.valor = dep.depId.toString();					
+					criteriosDepartamento.addItem(cp);	
+				}
+				criterioOR.criterios = criteriosDepartamento;					
+				criterios.addItem(criterioOR);
+				despesaPorVencimentoService.buscaPorCriterios(criterios);
+			}
+			
+			public function realizaConsultaDespesasIndiretas():void{
+				var criterios:ArrayCollection = new ArrayCollection();
+				var i:int;
+				var criterioIntervalo:CriterioDePesquisaIntervalo = new CriterioDePesquisaIntervalo();
+				criterioIntervalo.criterio = "dpvVencimento.venNome";
+				criterioIntervalo.valorInicial = (getMesFormatado(dataInicial.displayedMonth) + "/" + dataInicial.displayedYear);
+				criterioIntervalo.valorFinal = (getMesFormatado(dataFinal.displayedMonth) + "/" + dataFinal.displayedYear);
+				criterios.addItem(criterioIntervalo);
+				var socio:Socio = (Socio)(sociosCombo.selectedItem);
+				var criteriosDepartamento:ArrayCollection = new ArrayCollection();					
+				var criterioOR:CriterioDePesquisaOR = new CriterioDePesquisaOR();
+				for each (var dep : Departamento in departamentosSocios){
+					for each (var depDependente : DepartamentoDepartamento in dep.departamentosDependentes){
+						var cp:CriterioDePesquisaComparacaoNumero = new CriterioDePesquisaComparacaoNumero();
+						cp.criterio = "dpvDespesa.desDepartamento.depId";
+						cp.valor = depDependente.ddDepartamento.depId.toString();					
+						criteriosDepartamento.addItem(cp);	
+					}	
+				}				
+				if(criteriosDepartamento.length > 0) {
+					criterioOR.criterios = criteriosDepartamento;					
+					criterios.addItem(criterioOR);					
+					despesaPorVencimentoServiceIndireto.buscaPorCriterios(criterios);
+				}
+				else {
+					pdg0.status = "Não foi encontrada nenhuma despesa indireta para o filtro solicitado.";
+				}
+			}
+			
+			public function abreResultados(event:ResultEvent):void{
+				//Alert.show("event: " + event);
+				despesas = (ArrayCollection) (event.result);
+				//Alert.show("alterei provider: ");
+				dg.dataProvider = despesas;
+				if(despesas.length == 0)
+					pdg.status = "Não foi encontrada nenhuma despesa para o filtro solicitado.";
+				else if(despesas.length == 1)
+					pdg.status = "Foi encontrada uma despesa.";
+				else 
+					pdg.status = "Foram encontradas " + despesas.length + " despesas.";
+				
+				pdg.status = pdg.status + " Totalizando R$ " + getCustoTotalDespesas(despesas);  				
+				//Alert.show("resultou em: " + despesas);				
+			}
+			
+			public function abreResultadosIndiretos(event:ResultEvent):void{
+				//Alert.show("event: " + event);
+				despesasIndiretas = (ArrayCollection) (event.result);
+				//Alert.show("alterei provider: ");
+				dg0.dataProvider = despesasIndiretas;
+				if(despesasIndiretas.length == 0)
+					pdg0.status = "Não foi encontrada nenhuma despesa indireta para o filtro solicitado.";
+				else if(despesasIndiretas.length == 1)
+					pdg0.status = "Foi encontrada uma despesa indireta.";
+				else 
+					pdg0.status = "Foram encontradas " + despesas.length + " despesas indiretas.";
+				
+				pdg0.status = pdg0.status + " Totalizando R$ " + getCustoTotalDespesasIndiretas(despesasIndiretas);  				
+				//Alert.show("resultou em: " + despesas);				
+			}
+			
+			public function getCustoTotalDespesas(despesas:ArrayCollection): String {
+				var valorTotal:Number = new Number();
+				var myPattern:RegExp = /[.]/g;				    
+				var myPattern2:RegExp = /[,]/g;				    
+				for each (var desAtual:DespesaPorVencimento in despesas)
+				{
+					valorTotal += parseFloat(desAtual.dpvValor.replace(myPattern, "").replace(myPattern2, "."));
+				}
+				
+				return moedaFormat.format(valorTotal);
+			}
+			
+			public function getCustoTotalDespesasIndiretas(despesas:ArrayCollection): String {
+				var valorTotal:Number = new Number();
+				var socioAtual:Socio = (Socio)(sociosCombo.selectedItem);
+				var myPattern:RegExp = /[.]/g;				    
+				var myPattern2:RegExp = /[,]/g;				    
+				for each (var desAtual:DespesaPorVencimento in despesas)
+				{
+					for each (var dono:DepartamentoSocio in desAtual.dpvDespesa.desDepartamento.sociosDonos)
+	                {
+	                	if(socioAtual.socId == dono.dsSocio.socId)
+							valorTotal += (parseFloat(dono.dsPorcentagem.replace(myPattern, "").replace(myPattern2, ".")) * parseFloat(desAtual.dpvValor.replace(myPattern, "").replace(myPattern2, ".")))/100;
+	                }
+				}				
+				return moedaFormat.format(valorTotal);
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.message);
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+			
+			private function propPercentualLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:DespesaPorVencimento = (DespesaPorVencimento)(item);
+                for each (var dono:DepartamentoSocio in currentItem.dpvDespesa.desDepartamento.sociosDonos)
+                {
+                	var socioAtual:Socio = (Socio)(sociosCombo.selectedItem);
+                	if(socioAtual.socId == dono.dsSocio.socId)
+                		return dono.dsPorcentagem + "";
+                }
+                return "0";
+            }
+			
+			private function propValorRateadoLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var myPattern:RegExp = /[.]/g;				    
+				var myPattern2:RegExp = /[,]/g;				    
+				var currentItem:DespesaPorVencimento = (DespesaPorVencimento)(item);
+                var socioAtual:Socio = (Socio)(sociosCombo.selectedItem);
+                for each (var dono:DepartamentoSocio in currentItem.dpvDespesa.desDepartamento.sociosDonos)
+                {
+                	if(socioAtual.socId == dono.dsSocio.socId)
+                		return moedaFormat.format((parseFloat(dono.dsPorcentagem.replace(myPattern, "").replace(myPattern2, ".")) * parseFloat(currentItem.dpvValor.replace(myPattern, "").replace(myPattern2, ".")))/100);
+                }
+                return "0,00";
+            }
+            
+		]]>
+	</mx:Script>
+	
+	<mx:NumberFormatter id="moedaFormat"
+        decimalSeparatorFrom=","
+	    decimalSeparatorTo=","
+	    precision="2"
+	    rounding="none"
+	    thousandsSeparatorFrom="."
+	    thousandsSeparatorTo="."
+	    useNegativeSign="true"
+	    useThousandsSeparator="true" 
+    />
+        
+	<mx:Array id="validadores">
+		
+	</mx:Array>
+	
+	<mx:RemoteObject id="socioService" showBusyCursor="true"
+		fault="onFault(event)" destination="socioService">
+		<mx:method name="getList" fault="onFault(event)" result="carregaSocios(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="departamentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="departamentoService">
+		<mx:method name="getListPorSocio" fault="onFault(event)" result="carregaDepartamentosSocios(event)">
+		<mx:arguments>
+            <commandArgs>{Socio}</commandArgs>
+        </mx:arguments>
+    	</mx:method>             		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="despesaPorVencimentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="despesaPorVencimentoService">
+		<mx:method name="buscaPorCriterios" fault="onFault(event)" result="abreResultados(event)">
+			<mx:arguments>
+	            <commandArgs>{ArrayCollection}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>         		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="despesaPorVencimentoServiceIndireto" showBusyCursor="true"
+		fault="onFault(event)" destination="despesaPorVencimentoService">
+		<mx:method name="buscaPorCriterios" fault="onFault(event)" result="abreResultadosIndiretos(event)">
+			<mx:arguments>
+	            <commandArgs>{ArrayCollection}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>         		
+	</mx:RemoteObject>
+	<mx:Label x="10" y="10" text="Data Inicial:" fontSize="11" fontWeight="bold"/>
+	<mx:VBox  x="10" y="37" height="28">
+    	<components:MonthChooser id="dataInicial" yearNavigationEnabled="true" styleName="monthChooserStyles" selectedDate="{dateInicial}" height="31" width="160" showToday="false"/>
+    </mx:VBox>	
+	<mx:Label x="224" y="10" text="Data Final:" fontSize="11" fontWeight="bold"/>
+	<mx:Label x="435" y="10" text="Sócio:" fontSize="11" fontWeight="bold"/>
+	<mx:VBox x="224" y="37" height="28">
+    	<components:MonthChooser id="dataFinal" yearNavigationEnabled="true" styleName="monthChooserStyles" selectedDate="{dateFinal}" height="31" width="160" showToday="false"/>
+	</mx:VBox>	
+	
+	<mx:Panel id="pdg" x="0" y="82" layout="absolute" title="Despesas Diretas" height="211" width="100%" status="">
+		<mx:DataGrid id="dg" dataProvider="{despesas}" x="0" y="0" width="100%" height="100%">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Nome" dataField="dpvDespesa.desNome" width="80" labelFunction="propChainLabelFunction"/>
+				<mx:DataGridColumn headerText="Categoria" dataField="dpvDespesa.desCategoria" labelFunction="propChainLabelFunction" width="80"/>
+				<mx:DataGridColumn headerText="Valor" dataField="dpvValor" width="40"/>
+				<mx:DataGridColumn headerText="Venc." dataField="dpvVencimento" labelFunction="propChainLabelFunction" width="40"/>
+				<mx:DataGridColumn headerText="Departamento" dataField="dpvDespesa.desDepartamento" labelFunction="propChainLabelFunction" width="100"/>				
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ComboBox x="435" y="37" width="339" height="28" id="sociosCombo" dataProvider="{socios}"></mx:ComboBox>
+	
+	<mx:Panel id="pdg0" x="0" y="301" layout="absolute" title="Despesas Indiretas" height="211" width="100%" status="">
+		<mx:DataGrid id="dg0" dataProvider="{despesasIndiretas}" x="0" y="0" width="100%" height="100%">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Nome" dataField="dpvDespesa.desNome" width="80" labelFunction="propChainLabelFunction"/>
+				<mx:DataGridColumn headerText="Categoria" dataField="dpvDespesa.desCategoria" labelFunction="propChainLabelFunction" width="80"/>
+				<mx:DataGridColumn headerText="Valor" dataField="dpvValor" width="40"/>
+				<mx:DataGridColumn headerText="Venc." dataField="dpvVencimento" labelFunction="propChainLabelFunction" width="40"/>
+				<mx:DataGridColumn headerText="Departamento" dataField="dpvDespesa.desDepartamento" labelFunction="propChainLabelFunction" width="100"/>
+				<mx:DataGridColumn headerText="%" dataField="porcentagem" labelFunction="propPercentualLabelFunction" width="20"/>
+				<mx:DataGridColumn headerText="Valor Rateado" dataField="dpvValor" labelFunction="propValorRateadoLabelFunction" width="60"/>
+								
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ControlBar height="52">
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')"/>
+		<mx:Button label="Consulta" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{realizaConsulta()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')"/>
+		<mx:Button label="Remover" id="btnRemover" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+	
+	
+</mx:TitleWindow>

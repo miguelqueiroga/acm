@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Relatorio_Produto" pageWidth="595" pageHeight="842" columnWidth="535" leftMargin="30" rightMargin="30" topMargin="20" bottomMargin="20">
+	<property name="ireport.scriptlethandling" value="0"/>
+	<property name="ireport.encoding" value="UTF-8"/>
+	<property name="ireport.zoom" value="1.5"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="61"/>
+	<import value="net.sf.jasperreports.engine.*"/>
+	<import value="java.util.*"/>
+	<import value="net.sf.jasperreports.engine.data.*"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String">
+		<defaultValueExpression><![CDATA[".\\"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="valorBruto" class="java.lang.String">
+		<fieldDescription><![CDATA[rpcValorBrutoTotal]]></fieldDescription>
+	</field>
+	<field name="convenio" class="java.lang.String">
+		<fieldDescription><![CDATA[rpcConvenio.conNome]]></fieldDescription>
+	</field>
+	<field name="qtdeExames" class="java.lang.String">
+		<fieldDescription><![CDATA[rpcQuantidadeExamesTotal]]></fieldDescription>
+	</field>
+	<field name="despesas" class="java.lang.String">
+		<fieldDescription><![CDATA[rpcValorDespesasTotal]]></fieldDescription>
+	</field>
+	<field name="credito" class="java.lang.String">
+		<fieldDescription><![CDATA[rpcValorCreditado]]></fieldDescription>
+	</field>
+	<field name="venNome" class="java.lang.String">
+		<fieldDescription><![CDATA[rpcVencimento.venNome]]></fieldDescription>
+	</field>
+	<field name="receitas" class="java.lang.Object">
+		<fieldDescription><![CDATA[receitasCollectionJR]]></fieldDescription>
+	</field>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="73" splitType="Stretch">
+			<staticText>
+				<reportElement key="staticText-1" x="81" y="13" width="373" height="27" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="18" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[ACM]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-2" x="112" y="42" width="311" height="21" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="16" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Sistema de Controle Financeiro]]></text>
+			</staticText>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="41" splitType="Stretch">
+			<rectangle radius="0">
+				<reportElement key="rectangle-1" mode="Opaque" x="-1" y="3" width="536" height="29" forecolor="#FFFFFF" backcolor="#3F94BA"/>
+				<graphicElement fill="Solid"/>
+			</rectangle>
+			<staticText>
+				<reportElement key="staticText-3" x="136" y="8" width="263" height="19" forecolor="#FFFFFF"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="14" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Relatório de Receitas]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="167" splitType="Prevent">
+			<elementGroup/>
+			<line>
+				<reportElement key="line-1" x="0" y="2" width="535" height="1" forecolor="#000000"/>
+				<graphicElement>
+					<pen lineWidth="1.0" lineStyle="Dashed"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement key="line-3" x="0" y="31" width="534" height="1" forecolor="#000000"/>
+			</line>
+			<line>
+				<reportElement key="line-4" x="0" y="53" width="535" height="1" forecolor="#000000"/>
+			</line>
+			<line>
+				<reportElement key="line-5" x="0" y="32" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="534" y="31" width="1" height="22"/>
+			</line>
+			<staticText>
+				<reportElement key="staticText-13" x="4" y="8" width="70" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Convênio]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-37" x="281" y="8" width="80" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Total Receitas]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-30" x="450" y="8" width="84" height="15" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Bottom">
+					<font fontName="SansSerif" size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Valor Creditado]]></text>
+			</staticText>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-24" x="213" y="35" width="58" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{qtdeExames}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-25" x="7" y="35" width="129" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{convenio}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement key="line-6" x="450" y="32" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="365" y="32" width="1" height="21"/>
+			</line>
+			<staticText>
+				<reportElement key="staticText-26" x="206" y="8" width="71" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Qtde Exames]]></text>
+			</staticText>
+			<line>
+				<reportElement key="line-6" x="206" y="32" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="280" y="32" width="1" height="21"/>
+			</line>
+			<staticText>
+				<reportElement key="staticText-38" x="287" y="35" width="19" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[R$]]></text>
+			</staticText>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-22" x="305" y="35" width="56" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{valorBruto}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement key="staticText-37" x="366" y="8" width="78" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Total Despesas]]></text>
+			</staticText>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-22" x="390" y="35" width="54" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{despesas}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement key="staticText-38" x="372" y="35" width="19" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[R$]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-38" x="457" y="35" width="19" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[R$]]></text>
+			</staticText>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-22" x="475" y="35" width="49" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{credito}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-24" x="143" y="36" width="60" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{venNome}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement key="line-6" x="136" y="31" width="1" height="21"/>
+			</line>
+			<staticText>
+				<reportElement key="staticText-26" x="138" y="8" width="61" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Vencimento]]></text>
+			</staticText>
+			<subreport>
+				<reportElement x="15" y="101" width="471" height="20"/>
+				<dataSourceExpression><![CDATA[$F{receitas}]]></dataSourceExpression>
+				<subreportExpression class="java.lang.String"><![CDATA[$P{SUBREPORT_DIR} + "Relatorio_Receita.jasper"]]></subreportExpression>
+			</subreport>
+			<staticText>
+				<reportElement key="staticText-13" x="28" y="83" width="76" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Nome]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-26" x="158" y="83" width="71" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Qtde Exames]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-26" x="315" y="83" width="71" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Descontos]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-26" x="226" y="83" width="71" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Valor Bruto]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-26" x="410" y="83" width="71" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Valor Líquido]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-13" x="4" y="59" width="90" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Departamentos:]]></text>
+			</staticText>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band height="42" splitType="Stretch">
+			<staticText>
+				<reportElement key="staticText-11" x="2" y="7" width="271" height="15" forecolor="#000000"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="7" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Sistema de Controle de Produção]]></text>
+			</staticText>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-1" x="416" y="7" width="114" height="9"/>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif" size="7"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date())]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement key="staticText-12" x="2" y="22" width="290" height="17" forecolor="#3366FF"/>
+				<textElement>
+					<font fontName="SansSerif" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[CAMPINATEC - Serviços e Soluções em TI]]></text>
+			</staticText>
+			<line>
+				<reportElement key="line-1" x="1" y="4" width="535" height="1" forecolor="#000000"/>
+			</line>
+			<textField>
+				<reportElement x="413" y="20" width="80" height="20"/>
+				<textElement textAlignment="Right">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="493" y="20" width="40" height="20"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<lastPageFooter>
+		<band height="42" splitType="Stretch">
+			<staticText>
+				<reportElement key="staticText-14" x="3" y="8" width="271" height="15" forecolor="#000000"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="7" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Sistema de Controle de Produção]]></text>
+			</staticText>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-9" x="416" y="8" width="114" height="9"/>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif" size="7"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date())]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement key="staticText-15" x="3" y="23" width="289" height="17" forecolor="#3366FF"/>
+				<textElement>
+					<font fontName="SansSerif" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[CAMPINATEC - Serviços e Soluções em TI]]></text>
+			</staticText>
+			<line>
+				<reportElement key="line-2" x="0" y="5" width="535" height="1" forecolor="#000000"/>
+			</line>
+		</band>
+	</lastPageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

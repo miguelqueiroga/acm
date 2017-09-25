@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" title="Receitas da Empresa por Departamento" 
+	width="908" height="612" xmlns:components="components.*">
+	<mx:Script>
+		<![CDATA[
+			import entity.util.CriterioDePesquisaAND;
+			import entity.util.InformacoesDepartamentosDonos;
+			import entity.util.ConsultaPorCriterios;
+			import entity.Receita;
+			import entity.DespesaPorVencimento;
+			import entity.util.CriterioDePesquisaIntervalo;
+			import entity.CategoriaDespesa;
+			import entity.util.CriterioDePesquisaComparacaoNumero;
+			import entity.util.CriterioDePesquisaOR;
+			import entity.util.CriterioDePesquisa;
+			import mx.events.CollectionEvent;
+			import entity.DepartamentoSocio;
+			import entity.Socio;
+			import entity.Departamento;
+			import entity.Despesa;
+			import entity.DepartamentoDepartamento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			
+			
+			[Bindable]
+			private var dateInicial:Date = new Date(2010, 01, 01);
+            [Bindable]
+			private var dateFinal:Date = new Date(2010, 01, 01);
+            
+            [Bindable]
+			public var departamentos:ArrayCollection;
+            [Bindable]
+			public var receitas:ArrayCollection;
+            [Bindable]
+			public var receitasIndiretas:ArrayCollection;
+            
+            public function init():void{
+				listaDepartamentos();						
+            }
+			
+			public function listaDepartamentos():void{
+				departamentoService.getList();
+			}
+						
+			public function carregaDepartamentos(event:ResultEvent):void{
+				departamentos = (ArrayCollection)(event.result);
+			}
+			
+			public function limpaCampos():void{
+				//nome.text = "";
+			}
+			
+			public function getMesFormatado(mes:int):String{
+				return ((mes < 9) ? "0" : "") + (mes + 1);
+			}
+			
+			public function realizaConsulta():void{
+				realizaConsultaReceitasDiretas();
+				realizaConsultaReceitasIndiretas();						
+			}
+			
+			public function getCriteriosConsulta():ArrayCollection{
+				var criterios:ArrayCollection = new ArrayCollection();
+				var i:int;
+				var criterioIntervalo:CriterioDePesquisaIntervalo = new CriterioDePesquisaIntervalo();
+				criterioIntervalo.criterio = "recReceitaPorConvenio.rpcVencimento.venNome";
+				criterioIntervalo.valorInicial = (dataInicial.displayedYear + "/" + getMesFormatado(dataInicial.displayedMonth));
+				criterioIntervalo.valorFinal = (dataFinal.displayedYear + "/" + getMesFormatado(dataFinal.displayedMonth));
+				criterios.addItem(criterioIntervalo);
+				
+				var dep:Departamento = (Departamento)(departamentosCombo.selectedItem);
+				var cp:CriterioDePesquisaComparacaoNumero = new CriterioDePesquisaComparacaoNumero();
+				cp.criterio = "recDepartamento.depId";
+				cp.valor = dep.depId.toString();
+				criterios.addItem(cp);									
+				return criterios;
+			}
+			
+			public function realizaConsultaReceitasDiretas():void{
+				var criterios:ArrayCollection = getCriteriosConsulta();
+				receitaService.buscaPorCriterios(criterios);
+			}
+
+			public function realizaConsultaReceitasIndiretas():void{
+				var criterios:ArrayCollection = getCriteriosConsultaIndiretos();
+				if(criterios != null) {
+					receitasServiceIndireto.buscaPorCriterios(criterios);
+				}
+				else {
+					receitasIndiretas.removeAll();
+					pdg0.status = "Não foi encontrada nenhuma despesa indireta para o filtro solicitado.";
+				}
+			}
+			
+			public function getCriteriosConsultaIndiretos():ArrayCollection{ 
+				var dep:Departamento = (Departamento)(departamentosCombo.selectedItem);
+				if(dataFinal.displayedYear < 2014 || (dataFinal.displayedYear == 2014 && dataFinal.displayedMonth < 9)) {
+					return getCriteriosConsultaIndiretosPorData((dataInicial.displayedYear + "/" + getMesFormatado(dataInicial.displayedMonth)), 
+																(dataFinal.displayedYear + "/" + getMesFormatado(dataFinal.displayedMonth)),
+																InformacoesDepartamentosDonos.getDepartamentosIndiretosEstruturaAntiga(dep.depId));
+				}
+				else if(dataInicial.displayedYear > 2014 || (dataInicial.displayedYear == 2014 && dataInicial.displayedMonth >= 9)) {
+					  	return getCriteriosConsultaIndiretosPorData((dataInicial.displayedYear + "/" + getMesFormatado(dataInicial.displayedMonth)), 
+																(dataFinal.displayedYear + "/" + getMesFormatado(dataFinal.displayedMonth)),
+																InformacoesDepartamentosDonos.getDepartamentosIndiretosEstruturaNova(dep.depId));
+				}
+				else {
+					var criterios:ArrayCollection = new ArrayCollection();
+					var criteriosOR:ArrayCollection = new ArrayCollection();
+					var criterioAND:CriterioDePesquisaAND = new CriterioDePesquisaAND();
+					var criterioOR:CriterioDePesquisaOR = new CriterioDePesquisaOR();
+					var criteriosDepartamento:ArrayCollection = new ArrayCollection();
+					for each (var criterio : CriterioDePesquisa in getCriteriosConsultaIndiretosPorData(
+																(dataInicial.displayedYear + "/" + getMesFormatado(dataInicial.displayedMonth)), 
+																"2014/09",
+																InformacoesDepartamentosDonos.getDepartamentosIndiretosEstruturaAntiga(dep.depId))) {
+						criteriosDepartamento.addItem(criterio);											
+					}
+					criterioAND.criterios = criteriosDepartamento;
+					criteriosOR.addItem(criterioAND);
+					criteriosDepartamento = new ArrayCollection();
+					criterioAND = new CriterioDePesquisaAND();
+					for each (var criterio2 : CriterioDePesquisa in getCriteriosConsultaIndiretosPorData("2014/10", 
+																(dataFinal.displayedYear + "/" + getMesFormatado(dataFinal.displayedMonth)),
+																InformacoesDepartamentosDonos.getDepartamentosIndiretosEstruturaNova(dep.depId))) {
+						criteriosDepartamento.addItem(criterio2);									
+					}
+					criterioAND.criterios = criteriosDepartamento;
+					criteriosOR.addItem(criterioAND);
+					criterioOR.criterios = criteriosOR;
+					criterios.addItem(criterioOR);
+					return criterios;
+				}				
+			}
+			
+			public function getCriteriosConsultaIndiretosPorData(dataInicio:String, dataFinal:String, departamentoIndiretos:ArrayCollection):ArrayCollection{ 
+				var criterios:ArrayCollection = new ArrayCollection();
+				var i:int;
+				var criterioIntervalo:CriterioDePesquisaIntervalo = new CriterioDePesquisaIntervalo();
+				criterioIntervalo.criterio = "recReceitaPorConvenio.rpcVencimento.venNome";
+				criterioIntervalo.valorInicial = dataInicio;
+				criterioIntervalo.valorFinal = dataFinal;
+				criterios.addItem(criterioIntervalo);
+				var criteriosDepartamento:ArrayCollection = new ArrayCollection();					
+				var criterioOR:CriterioDePesquisaOR = new CriterioDePesquisaOR();
+				for each (var depInd : String in departamentoIndiretos){
+					var cp:CriterioDePesquisaComparacaoNumero = new CriterioDePesquisaComparacaoNumero();
+					cp.criterio = "recDepartamento.depId";
+					cp.valor = depInd;					
+					criteriosDepartamento.addItem(cp);	
+				}
+				if(criteriosDepartamento.length > 0) {
+					criterioOR.criterios = criteriosDepartamento;					
+					criterios.addItem(criterioOR);					
+					return criterios;
+				}
+				else {
+					return null;
+				}				
+			}
+			
+			public function getStringConsultaIndiretos():String{
+				var criterios:ArrayCollection = getCriteriosConsultaIndiretos();
+				if(criterios != null) {
+					return ConsultaPorCriterios.getConsultaPorCriterios(getCriteriosConsultaIndiretos(), "Receita");
+				}
+				else {
+					//despesasIndiretas.removeAll();
+					//despesasIndiretas = new ArrayCollection();
+					//dg0.dataProvider = despesasIndiretas;
+					pdg0.status = "Não foi encontrada nenhuma despesa indireta para o filtro solicitado.";
+					return null;
+				}				
+			}
+
+			public function getStringConsulta():String{
+				return ConsultaPorCriterios.getConsultaPorCriterios(getCriteriosConsulta(), "Receita");
+			}		
+			
+			public function gerarRealtorioPorMes(): void{				
+				var request:URLRequest = new URLRequest("ServletReportReceitasPorDepartamento");
+		 		var vars:URLVariables  = new URLVariables();
+		 		
+		 		var dep:Departamento = (Departamento)(departamentosCombo.selectedItem);
+				
+				vars.departamento = dep.depId;
+				vars.departamentoNome = dep.depNome;
+				vars.consulta = getStringConsulta();
+				vars.consultaIndiretos = getStringConsultaIndiretos();
+				vars.dataInicial = (dataInicial.displayedYear + "/" + getMesFormatado(dataInicial.displayedMonth));
+		 		vars.dataFinal = (dataFinal.displayedYear + "/" + getMesFormatado(dataFinal.displayedMonth));
+
+				request.data = vars;		
+				request.method = URLRequestMethod.POST;
+			
+				navigateToURL ( request, "_blank" );				
+			}
+						
+			public function abreResultados(event:ResultEvent):void{
+				//Alert.show("event: " + event);
+				receitas = (ArrayCollection) (event.result);
+				//Alert.show("alterei provider: ");
+				dg.dataProvider = receitas;
+				if(receitas.length == 0)
+					pdg.status = "Não foi encontrada nenhuma receita para o filtro solicitado.";
+				else if(receitas.length == 1)
+					pdg.status = "Foi encontrada uma receita.";
+				else 
+					pdg.status = "Foram encontradas " + receitas.length + " receitas.";
+				
+				pdg.status = pdg.status + " Totalizando R$ " + getCustoTotalReceitas(receitas);  				
+				//Alert.show("resultou em: " + despesas);				
+			}
+			
+			public function abreResultadosIndiretos(event:ResultEvent):void{
+				//Alert.show("event: " + event);
+				receitasIndiretas = (ArrayCollection) (event.result);
+				//Alert.show("alterei provider: ");
+				dg0.dataProvider = receitasIndiretas;
+				if(receitasIndiretas.length == 0)
+					pdg0.status = "Não foi encontrada nenhuma receita indireta para o filtro solicitado.";
+				else if(receitasIndiretas.length == 1)
+					pdg0.status = "Foi encontrada uma receita indireta.";
+				else 
+					pdg0.status = "Foram encontradas " + receitasIndiretas.length + " receitas indiretas.";
+				
+				pdg0.status = pdg0.status + " Totalizando R$ " + getCustoTotalReceitasIndiretas(receitasIndiretas);  				
+				//Alert.show("resultou em: " + despesas);				
+			}
+			
+			public function getCustoTotalReceitas(receitas:ArrayCollection): String {
+				var valorTotal:Number = new Number();
+				var myPattern:RegExp = /[.]/g;				    
+				var myPattern2:RegExp = /[,]/g;				    
+				for each (var recAtual:Receita in receitas)
+				{
+					valorTotal += parseFloat(recAtual.recValorLiquido.replace(myPattern, "").replace(myPattern2, "."));
+				}
+				
+				return moedaFormat.format(valorTotal);
+			}
+			
+			public function getCustoTotalReceitasIndiretas(receitas:ArrayCollection): String {
+				var valorTotal:Number = new Number();
+				var depAtual:Departamento = (Departamento)(departamentosCombo.selectedItem);
+				var myPattern:RegExp = /[.]/g;				    
+				var myPattern2:RegExp = /[,]/g;				    
+				for each (var recAtual:Receita in receitas)
+				{
+					var porcentagem: String = InformacoesDepartamentosDonos.getPorcentagemPorData(depAtual.depId, recAtual.recDepartamento.depId, recAtual.recReceitaPorConvenio.rpcVencimento);
+					valorTotal += (parseFloat(porcentagem.replace(myPattern, "").replace(myPattern2, ".")) * parseFloat(recAtual.recValorLiquido.replace(myPattern, "").replace(myPattern2, ".")))/100;
+				}				
+				return moedaFormat.format(valorTotal);
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.message);
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+			
+			private function propPercentualLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Receita = (Receita)(item);
+                var depAtual:Departamento = (Departamento)(departamentosCombo.selectedItem);
+            	return InformacoesDepartamentosDonos.getPorcentagemPorData(depAtual.depId, currentItem.recDepartamento.depId, currentItem.recReceitaPorConvenio.rpcVencimento);
+            }
+			
+			private function propValorRateadoLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var myPattern:RegExp = /[.]/g;				    
+				var myPattern2:RegExp = /[,]/g;				    
+				var currentItem:Receita = (Receita)(item);
+                var depAtual:Departamento = (Departamento)(departamentosCombo.selectedItem);
+            	var porcentagem:String = InformacoesDepartamentosDonos.getPorcentagemPorData(depAtual.depId, currentItem.recDepartamento.depId, currentItem.recReceitaPorConvenio.rpcVencimento);
+        		return moedaFormat.format((parseFloat(porcentagem.replace(myPattern, "").replace(myPattern2, ".")) 
+        		* parseFloat(currentItem.recValorLiquido.replace(myPattern, "").replace(myPattern2, ".")))/100);
+            }
+            
+		]]>
+	</mx:Script>
+	
+	<mx:NumberFormatter id="moedaFormat"
+        decimalSeparatorFrom=","
+	    decimalSeparatorTo=","
+	    precision="2"
+	    rounding="none"
+	    thousandsSeparatorFrom="."
+	    thousandsSeparatorTo="."
+	    useNegativeSign="true"
+	    useThousandsSeparator="true" 
+    />
+        
+	<mx:Array id="validadores">
+		
+	</mx:Array>
+	
+	<mx:RemoteObject id="departamentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="departamentoService">
+		<mx:method name="getList" fault="onFault(event)" result="carregaDepartamentos(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="receitaService" showBusyCursor="true"
+		fault="onFault(event)" destination="receitaService">
+		<mx:method name="buscaPorCriterios" fault="onFault(event)" result="abreResultados(event)">
+			<mx:arguments>
+	            <commandArgs>{ArrayCollection}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>         		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="receitasServiceIndireto" showBusyCursor="true"
+		fault="onFault(event)" destination="receitaService">
+		<mx:method name="buscaPorCriterios" fault="onFault(event)" result="abreResultadosIndiretos(event)">
+			<mx:arguments>
+	            <commandArgs>{ArrayCollection}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>         		
+	</mx:RemoteObject>
+	<mx:Label x="10" y="10" text="Data Inicial:" fontSize="11" fontWeight="bold"/>
+	<mx:VBox  x="10" y="37" height="28">
+    	<components:MonthChooser id="dataInicial" yearNavigationEnabled="true" styleName="monthChooserStyles" selectedDate="{dateInicial}" height="31" width="160" showToday="false"/>
+    </mx:VBox>	
+	<mx:Label x="224" y="10" text="Data Final:" fontSize="11" fontWeight="bold"/>
+	<mx:Label x="435" y="10" text="Departamento:" fontSize="11" fontWeight="bold"/>
+	<mx:VBox x="224" y="37" height="28">
+    	<components:MonthChooser id="dataFinal" yearNavigationEnabled="true" styleName="monthChooserStyles" selectedDate="{dateFinal}" height="31" width="160" showToday="false"/>
+	</mx:VBox>	
+	
+	<mx:Panel id="pdg" x="0" y="82" layout="absolute" title="Receitas Diretas" height="211" width="100%" status="">
+		<mx:DataGrid id="dg" dataProvider="{receitas}" x="0" y="0" width="100%" height="100%">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Convênio" dataField="recReceitaPorConvenio.rpcConvenio" labelFunction="propChainLabelFunction" width="100"/>
+				<mx:DataGridColumn headerText="Departamento" dataField="recDepartamento" labelFunction="propChainLabelFunction" width="100"/>
+				<mx:DataGridColumn headerText="Qtde Exames" dataField="recQuantidadeExames" width="40"/>
+				<mx:DataGridColumn headerText="Valor Bruto" dataField="recValorBruto" width="40"/>
+				<mx:DataGridColumn headerText="Despesas" dataField="recValorDespesas" width="40"/>
+				<mx:DataGridColumn headerText="Valor Líquido" dataField="recValorLiquido" width="40"/>								
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ComboBox x="435" y="37" width="339" height="28" id="departamentosCombo" dataProvider="{departamentos}"></mx:ComboBox>
+	
+	<mx:Panel id="pdg0" x="0" y="301" layout="absolute" title="Receitas Indiretas" height="211" width="100%" status="">
+		<mx:DataGrid id="dg0" dataProvider="{receitasIndiretas}" x="0" y="0" width="100%" height="100%">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Convênio" dataField="recReceitaPorConvenio.rpcConvenio" labelFunction="propChainLabelFunction" width="100"/>
+				<mx:DataGridColumn headerText="Departamento" dataField="recDepartamento" labelFunction="propChainLabelFunction" width="100"/>
+				<mx:DataGridColumn headerText="Qtde Exames" dataField="recQuantidadeExames" width="45"/>
+				<mx:DataGridColumn headerText="Valor Bruto" dataField="recValorBruto" width="40"/>
+				<mx:DataGridColumn headerText="Despesas" dataField="recValorDespesas" width="40"/>
+				<mx:DataGridColumn headerText="Valor Líquido" dataField="recValorLiquido" width="45"/>								
+				<mx:DataGridColumn headerText="%" dataField="porcentagem" labelFunction="propPercentualLabelFunction" width="25"/>
+				<mx:DataGridColumn headerText="Valor Rateado" dataField="dpvValor" labelFunction="propValorRateadoLabelFunction" width="55"/>
+								
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:ControlBar height="52">
+		<mx:Button label="Consulta" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{realizaConsulta()}"/>
+		<mx:Button label="Imprimir" id="btnRemover" icon="@Embed(source='../images/print.png')" click="{gerarRealtorioPorMes()}"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+	
+	
+</mx:TitleWindow>

@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow creationComplete="{init()}" close="{PopUpManager.removePopUp(this)}" 
+	xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" title="Departamentos da Empresa" 
+	width="804" height="484">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import entity.DepartamentoSocio;
+			import entity.Socio;
+			import entity.Departamento;
+			import entity.DepartamentoDepartamento;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.Validator;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.Application;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.collections.ArrayCollection;
+			
+			[Bindable]
+			public var lista:ArrayCollection;
+			public var dds:ArrayCollection;
+			public var dss:ArrayCollection;
+			public var ddsARemover:ArrayCollection;
+			public var dssARemover:ArrayCollection;
+			public var estaAlterando:Boolean;
+			public var idSelecionado:int = 0;
+			
+			public function init():void{
+				habilitaValidadores(false);
+				listaDepartamentos();				
+				estaAlterando = false;
+				idSelecionado = 0;
+			}
+			
+			public function getDDs():ArrayCollection {				
+				if(dg.selectedIndex >= 0)
+					dds = (Departamento)(lista.getItemAt(dg.selectedIndex)).departamentosDonos;
+				else dds = new ArrayCollection;
+				return dds;				
+			}
+			
+			public function getDSs():ArrayCollection {		
+				if(dg.selectedIndex >= 0)
+					dss =  (Departamento)(lista.getItemAt(dg.selectedIndex)).sociosDonos;
+				else dss = new ArrayCollection;
+				return dss;				
+			}
+			
+			public function addDDARemover(departamento:DepartamentoDepartamento):void{
+				ddsARemover.addItem(departamento);				
+			}
+			
+			public function addDSARemover(socio:DepartamentoSocio):void{
+				dssARemover.addItem(socio);
+			}
+			
+			public function abreJanelaDepartamentoDepartamento():void {
+				if(estaAlterando == true) {
+					Application.application.abrirDepartamentoDepartamento(this);
+				} else {
+					Alert.show("É necessário salvar o departamento antes de atribuir\noutro departamento como dono do mesmo.");
+				}
+			}
+			
+			public function abreJanelaDepartamentoSocio():void {
+				if(estaAlterando == true) {
+					Application.application.abrirDepartamentoSocio(this);
+				} else {
+					Alert.show("É necessário salvar o departamento antes de atribuir\num sócio como dono do mesmo.");
+				}
+			}
+			
+			public function listaDepartamentos():void{
+				departamentoService.getList();
+			}
+			
+			public function hrdpGrid(event:ResultEvent):void{
+				lista = (ArrayCollection)(event.result);
+				lista.sort = new Sort();
+                lista.sort.fields = [new SortField("depNome", false, false)];
+                lista.refresh();
+			}
+			
+			public function carregaDados():void{
+				if(lista.length > 0) {
+					if(dg.selectedIndex < 0)
+						dg.selectedIndex = 0;
+					var i : int;
+					idSelecionado = dg.selectedItem.depId;
+					nome.text = dg.selectedItem.depNome;
+					ehEspecial.selected = dg.selectedItem.depEhEspecial == "SIM" ? true : false;	
+					q1.dataProvider = (Departamento)(lista.getItemAt(dg.selectedIndex)).departamentosDonos;
+					q2.dataProvider = (Departamento)(lista.getItemAt(dg.selectedIndex)).sociosDonos;
+				}								
+			}
+			
+			public function alterar():void{
+				if ( dg.selectedIndex == -1)
+					Alert.show("Selecione um Registro!");
+				else{
+					habilitaValidadores(true);
+					habilitaEdic(true);
+					carregaDados();
+					habilitaAlter(true);
+					nome.setFocus();
+					estaAlterando = true;
+					ddsARemover = new ArrayCollection;
+					dssARemover = new ArrayCollection;					
+				}
+			}
+			
+			public function habilitaEdic(hab:Boolean):void{
+				nome.enabled = hab;
+				btdd.enabled = hab;
+				btds.enabled = hab;
+				ehEspecial.enabled = hab;
+			}
+			
+			public function cancelaOper():void{
+				limpaCampos();
+				habilitaEdic(false);
+				habilitaAlter(false);
+				carregaDados();
+				habilitaValidadores(false);				
+			}
+			
+			public function criaNovo():void{
+				habilitaValidadores(true);
+				limpaCampos();
+				habilitaEdic(true);
+				habilitaAlter(true);
+				nome.setFocus();
+			}
+			
+			public function limpaCampos():void{
+				idSelecionado = 0;
+				nome.text = "";
+				ehEspecial.selected = false;				
+			}
+			
+			public function habilitaAlter(hab:Boolean):void{
+				btnNovo.enabled = !hab;
+				btnAlterar.enabled = !hab;
+				btnSalvar.enabled = hab;
+				btnCancelar.enabled = hab;
+				btnRemover.enabled = !hab;
+				btnFechar.enabled = !hab;
+				pdg.enabled = !hab;			
+			}
+			
+			public function habilitaValidadores(hab:Boolean):void{
+				validadorNome.enabled = hab;	
+			}
+			
+			
+			public function departamentoGravado(event:ResultEvent):void{
+				habilitaValidadores(false);
+				limpaCampos();	
+				habilitaEdic(false);
+				habilitaAlter(false);
+				listaDepartamentos();
+				Alert.show( "Departamento salvo com sucesso!" );				
+			}
+			
+			public function departamentoRemovido(event:ResultEvent):void{
+				limpaCampos();
+				listaDepartamentos();
+				Alert.show( "Departamento removido com sucesso!" );				
+			}
+			
+			public function erroGravando(event:FaultEvent):void{
+				Alert.show( ObjectUtil.toString(event.fault));
+			}
+			
+			public function getParameters():Departamento{
+				var departamento : Departamento = new Departamento();
+				departamento.depNome = nome.text;
+				departamento.depId = idSelecionado;
+				departamento.departamentosDonos = dds;
+				departamento.sociosDonos = dss;		
+				departamento.depEhEspecial = ehEspecial.selected == true ? "SIM" : "NAO";						
+				return departamento;
+			}
+			
+			public function salvarDepartamento():void{
+				 if (validar()){
+				 	if (Application.application.isAdministrador()) {
+					 	var dep:Departamento = null; 
+					 	if(!estaAlterando) {
+						 	dep = this.getParameters();						
+						}
+						else {
+							//Alert.show("alterando");
+							dep = (Departamento)(dg.selectedItem);
+							dep.depNome = nome.text;
+							dep.depEhEspecial = ehEspecial.selected == true ? "SIM" : "NAO";						
+							//dep.departamentosDonos = new ArrayCollection;
+							estaAlterando = false
+						}
+						for each (var dd : DepartamentoDepartamento in ddsARemover) {
+							departamentoDepartamentoService.remove(dd);						
+						}									
+						for each (var ds : DepartamentoSocio in dssARemover) {
+							departamentoSocioService.remove(ds);												
+						}									
+						for each (var ds2 : DepartamentoSocio in dep.sociosDonos) {
+							//Alert.show("fords: " + ds.dsId);
+							ds2.dsDepartamento = dep;
+							departamentoSocioService.save(ds2);
+							//Alert.show("fords: salvei");	
+						}									
+						for each (var dd2 : DepartamentoDepartamento in dep.departamentosDonos) {
+							//Alert.show("fordd: " + dd.ddId);
+							dd2.ddDepartamento = dep;
+							departamentoDepartamentoService.save(dd2);
+							//Alert.show("fordd: salvei");	
+						}									
+						var dds: ArrayCollection = dep.departamentosDonos; 
+						var dss: ArrayCollection = dep.sociosDonos; 
+						dep.departamentosDonos = new ArrayCollection;
+						dep.sociosDonos = new ArrayCollection;
+						departamentoService.save( dep );		
+						dep.departamentosDonos = dds;
+						dep.sociosDonos = dss;
+						//Alert.show("salvei dep");
+					}
+					else {
+						Alert.show("Você não possui permissão \npara salvar registros!");
+					}	
+				 }
+			}
+			
+			public function removerSelecionado():void{
+				Alert.yesLabel = "Sim";
+			  	Alert.noLabel = "Não";
+			  	Alert.show("Deseja remover este Departamento?","Remover", Alert.YES | Alert.NO, this, confirmaRemocao);				 
+			}
+			
+			public function confirmaRemocao(event:CloseEvent):void{
+				if (event.detail==Alert.YES) {
+					if(dg.selectedIndex >= 0){
+						if(Application.application.isAdministrador()){
+							departamentoService.remove( this.getParameters() );
+						}
+						else {
+							Alert.show("Você não possui permissão \npara remover este registro!");
+						}
+					}
+					else {
+				 		Alert.show("Selecione um Registro!");
+				 	}			
+				}
+			}
+			
+			public function validar():Boolean{
+				var valido : Boolean;
+				
+				for each (var v : Validator in validadores ){
+					var resultEvent : ValidationResultEvent = v.validate();
+					if( resultEvent.type != ValidationResultEvent.VALID ){
+						valido = false;
+						break;
+					} else {
+						valido = true;
+					}
+				}
+				return valido;
+			}
+			//Ocorreu uma falha ao chamar algum servico servico.
+			public function onFault(event:FaultEvent):void
+			{												
+				Alert.show(event.fault.rootCause.localizedMessage, "OCORREU UM ERRO");
+			}
+			
+			public function validate(v:Validator):void{
+				v.validate();								
+			}
+			
+			public function upperCampo(campo : TextInput):void {
+				var comparador: String = "àãõâêôáéíóúç";
+				var texto: String = campo.text;
+				var posicao: int = campo.selectionBeginIndex - 1;
+				var caracter: String = texto.charAt(posicao);
+				
+				if (comparador.indexOf(caracter) != -1){
+					var strCampo: String = campo.text;
+					campo.text = strCampo.toUpperCase();
+					campo.selectionBeginIndex = posicao+1;
+					campo.selectionEndIndex = posicao+1;
+				}
+			}
+			
+			private function propChainLabelFunction(item:Object,column:DataGridColumn):String
+            {
+                var currentItem:Object = item;
+                var chain:Array = column.dataField.split(".");
+                for each (var prop:String in chain)
+                {
+                        currentItem = currentItem[prop];
+                }
+                return currentItem.toString();
+            }
+            
+		]]>
+	</mx:Script>
+	
+	<mx:Array id="validadores">		
+		<mx:StringValidator id="validadorNome" source="{nome}" minLength="2" required="true" property="text"
+			requiredFieldError="Nome não pode ser vazio." tooShortError="Nome deve ter no mínimo 2 caracteres."
+		/>			
+	</mx:Array>
+	
+	<mx:RemoteObject id="departamentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="departamentoService">
+		<mx:method name="save" fault="onFault(event)" result="departamentoGravado(event)">
+			<mx:arguments>
+	            <commandArgs>{Departamento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="remove" fault="onFault(event)" result="departamentoRemovido(event)">
+			<mx:arguments>
+	            <commandArgs>{Departamento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>
+    	<mx:method name="getList" fault="onFault(event)" result="hrdpGrid(event)"/>            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="departamentoDepartamentoService" showBusyCursor="true"
+		fault="onFault(event)" destination="departamentoDepartamentoService">
+		<mx:method name="save" fault="onFault(event)">
+			<mx:arguments>
+	            <commandArgs>{DepartamentoDepartamento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>            		
+		<mx:method name="remove" fault="onFault(event)">
+			<mx:arguments>
+	            <commandArgs>{DepartamentoDepartamento}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>            		
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject id="departamentoSocioService" showBusyCursor="true"
+		fault="onFault(event)" destination="departamentoSocioService">
+		<mx:method name="remove" fault="onFault(event)">
+			<mx:arguments>
+	            <commandArgs>{DepartamentoSocio}</commandArgs>
+	        </mx:arguments>
+    	</mx:method>            		
+	</mx:RemoteObject>
+	
+	<mx:Label x="10" y="12" text="Nome"/>
+	<mx:TextInput x="62" y="10" width="308" id="nome" enabled="false" maxChars="40" restrict="[A-Z \- \\ ÀÃÕÂÊÔÁÉÍÓÚÇ àãõâêôáéíóúç]" change="validate(validadorNome); upperCampo(this.nome)"/>
+	<mx:CheckBox x="401" y="10" label="É departamento especial?" width="182" id="ehEspecial" enabled="false" selected="false"/>
+	<mx:Panel id="pdg" x="10" y="209" layout="absolute" title="Departamentos Cadastrados" height="181" width="764">
+		<mx:DataGrid id="dg" dataProvider="{lista}" x="0" y="0" width="744"
+			change="{carregaDados()}" height="141" itemClick="{carregaDados()}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Nome" dataField="depNome" width="220"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:Panel x="10" y="79" width="374" height="122" layout="absolute" title="Departamentos Donos">
+		<mx:DataGrid id="q1" x="0" y="0" height="82" width="354" enabled="true">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Departamento" dataField="ddDepartamentoDono" labelFunction="propChainLabelFunction" width="80"/>
+				<mx:DataGridColumn headerText="Porcentagem" dataField="ddPorcentagem" width="30"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Panel>
+	<mx:Panel x="401" y="79" width="373" height="122" layout="absolute" title="Sócios Donos">
+		<mx:DataGrid id="q2" x="0" y="0" height="82" width="353" enabled="true">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Sócio" dataField="dsSocio" labelFunction="propChainLabelFunction" width="80"/>
+				<mx:DataGridColumn headerText="Porcentagem" dataField="dsPorcentagem" width="30"/>
+			</mx:columns>
+		</mx:DataGrid>	
+	</mx:Panel>
+	
+	<mx:Button id="btdd" x="10" y="47" width="236" icon="@Embed(source='../images/alter.png')" labelPlacement="right" enabled="false" label="Gerenciar Departamentos Donos" click="{abreJanelaDepartamentoDepartamento()}"/>
+	<mx:Button id="btds" x="401" y="47" width="182" icon="@Embed(source='../images/alter.png')" enabled="false" label="Gerenciar Sócios Donos" click="{abreJanelaDepartamentoSocio()}"/>
+	
+	<mx:ControlBar height="52">
+		<mx:Button label="Adicionar" id="btnNovo" icon="@Embed('../images/add.png')" click="{criaNovo()}"/>
+		<mx:Button label="Alterar" id="btnAlterar" icon="@Embed('../images/alter.png')" click="{alterar()}"/>
+		<mx:Button label="Salvar" enabled="false" id="btnSalvar" icon="@Embed('../images/ok.png')" click="{salvarDepartamento()}"/>
+		<mx:Button label="Cancelar" enabled="false" id="btnCancelar" icon="@Embed('../images/cancel.png')" click="{cancelaOper()}"/>
+		<mx:Button label="Remover" id="btnRemover" click="{removerSelecionado()}" icon="@Embed(source='../images/menos.png')"/>
+		<mx:Button label="Fechar" id="btnFechar" click="{PopUpManager.removePopUp(this)}" icon="@Embed('../images/close.png')"/>
+	</mx:ControlBar>
+	
+	
+	
+	
+</mx:TitleWindow>

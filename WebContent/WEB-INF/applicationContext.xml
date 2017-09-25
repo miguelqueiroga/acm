@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+			http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+			http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd
+			http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-2.5.xsd
+			http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.5.xsd">
+	<!--
+		////////////////////////////////////// 
+		Integração do Spring com o Hibernate
+		////////////////////////////////////// 
+	-->
+
+	<!-- 
+		Carregamento do Arquivo de Configuracoes do JDBC
+	-->
+	<context:property-placeholder location="classpath:jdbc.properties" />
+
+	<!-- 
+		Configuracao do DataSource
+	-->
+	<bean id="dataSource"
+		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName">
+			<value>${jdbc.driverClassName}</value>
+		</property>
+		<property name="url">
+			<value>${jdbc.url}</value>
+		</property>
+		<property name="username">
+			<value>${jdbc.username}</value>
+		</property>
+		<property name="password">
+			<value>${jdbc.password}</value>
+		</property>
+	</bean>
+
+	<!--
+		Hibernate SessionFactory 
+	-->
+	<bean id="sessionFactory"
+		class="ACM.controller.AnnotationOptimizedSessionFactoryBean"
+		dependency-check="none">
+
+		<property name="dataSource">
+			<ref local="dataSource" />
+		</property>
+
+		<property name="namingStrategy">
+		  <bean class="org.hibernate.cfg.DefaultComponentSafeNamingStrategy" />
+		</property>
+
+		<!-- Configuracoes do Hibernate -->
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">
+					org.hibernate.dialect.MySQLInnoDBDialect
+				</prop>
+				<prop key="hibernate.show_sql">false</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+				<!--
+					Atualizar o Banco de dados de acordo com os arquivos de mapeamentos.  
+					<prop key="hibernate.hbm2ddl.auto">update</prop> 
+				-->
+			</props>
+		</property>
+		
+		<!-- usando o AnnotationOptimizedSessionFactoryBean fazendo só isso já mapea todo o nosso pacote que comtén o @Entity do JPA -->
+		<property name="basePackage">
+			<value>ACM.model.entity</value>
+		</property>		
+	</bean>
+
+	<!-- 
+		Transaction Manager 
+	-->
+	<bean id="transactionManager"
+		class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<property name="sessionFactory">
+			<ref local="sessionFactory" />
+		</property>
+	</bean>
+
+	<!-- Habilita os Services para serem transicionais via a Annotation @Transactional -->
+	<tx:annotation-driven transaction-manager="transactionManager" />
+
+	<!-- ============================== AOP DEFINITIONS ================================ -->
+	
+
+	<!-- ========================= BUSINESS OBJECT DEFINITIONS ========================= -->
+	<!--
+		Activates various annotations to be detected in bean classes:
+		Spring's @Required and @Autowired, as well as JSR 250's @Resource.
+	-->
+	<context:annotation-config />
+
+	<!-- Carrega os Beans de Servico -->
+	<context:component-scan
+		base-package="ACM.model.service" />
+
+	<!-- Carrega os Beans DAO Hibernate -->
+	<context:component-scan
+		base-package="ACM.model.repository.hibernate" />
+</beans>

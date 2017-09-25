@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Relatorio_Despesa" pageWidth="595" pageHeight="842" columnWidth="535" leftMargin="30" rightMargin="30" topMargin="20" bottomMargin="20">
+	<property name="ireport.scriptlethandling" value="0"/>
+	<property name="ireport.encoding" value="UTF-8"/>
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<import value="net.sf.jasperreports.engine.*"/>
+	<import value="java.util.*"/>
+	<import value="net.sf.jasperreports.engine.data.*"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String">
+		<defaultValueExpression><![CDATA[".\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="dataInicial" class="java.lang.String"/>
+	<parameter name="dataFinal" class="java.lang.String"/>
+	<parameter name="departamentos" class="java.lang.String"/>
+	<parameter name="categorias" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="venNome" class="java.lang.String">
+		<fieldDescription><![CDATA[dpvVencimento.venNomeFormatado]]></fieldDescription>
+	</field>
+	<field name="desNome" class="java.lang.String">
+		<fieldDescription><![CDATA[dpvDespesa.desNome]]></fieldDescription>
+	</field>
+	<field name="desValor" class="java.lang.String">
+		<fieldDescription><![CDATA[dpvValor]]></fieldDescription>
+	</field>
+	<field name="depNome" class="java.lang.String">
+		<fieldDescription><![CDATA[dpvDespesa.desDepartamento.depNome]]></fieldDescription>
+	</field>
+	<field name="cdNome" class="java.lang.String">
+		<fieldDescription><![CDATA[dpvDespesa.desCategoria.cdNome]]></fieldDescription>
+	</field>
+	<field name="obs" class="java.lang.String">
+		<fieldDescription><![CDATA[dpvObservacao]]></fieldDescription>
+	</field>
+	<variable name="somaDespesas" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[Double.parseDouble($F{desValor}.replaceAll("\\.", "").replaceAll(",", "\\."))]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="93" splitType="Stretch">
+			<staticText>
+				<reportElement key="staticText-1" x="81" y="13" width="373" height="27" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="18" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[ACM - Assessoria em Contas Médicas]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="327" y="69" width="201" height="20"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<textFieldExpression class="java.lang.String"><![CDATA["Período: " + $P{dataInicial} + " à " + $P{dataFinal}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="2" y="48" width="527" height="20"/>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression class="java.lang.String"><![CDATA["Departamento (s): " + $P{departamentos}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="2" y="68" width="312" height="20"/>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression class="java.lang.String"><![CDATA["Categoria (s): " + $P{categorias}]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="56" splitType="Stretch">
+			<staticText>
+				<reportElement key="staticText-3" x="180" y="5" width="166" height="19" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="14" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Relatório de Despesas]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-13" x="3" y="34" width="46" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Nome]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-26" x="209" y="35" width="48" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Valor (R$)]]></text>
+			</staticText>
+			<line>
+				<reportElement key="line-3" x="0" y="55" width="535" height="1" forecolor="#000000"/>
+			</line>
+			<staticText>
+				<reportElement key="staticText-37" x="263" y="34" width="64" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Categoria]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-39" x="387" y="34" width="67" height="16" forecolor="#000000"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Departamento]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-30" x="494" y="35" width="38" height="15" forecolor="#000000"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Vencim.]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="22" splitType="Prevent">
+			<elementGroup/>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-22" x="209" y="3" width="48" height="16"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{desValor}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement key="line-4" x="0" y="21" width="535" height="1" forecolor="#000000"/>
+			</line>
+			<line>
+				<reportElement key="line-5" x="0" y="0" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="534" y="0" width="1" height="22"/>
+			</line>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-24" x="263" y="3" width="119" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{cdNome}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-25" x="387" y="3" width="102" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{depNome}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-25" x="3" y="3" width="198" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{desNome} + (($F{obs} == null || $F{obs}.equals("")) ? "" : " *")]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-25" x="493" y="3" width="40" height="16"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{venNome}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement key="line-6" x="491" y="0" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="384" y="0" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="260" y="0" width="1" height="21"/>
+			</line>
+			<line>
+				<reportElement key="line-6" x="205" y="0" width="1" height="21"/>
+			</line>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band height="55" splitType="Stretch">
+			<textField isBlankWhenNull="false">
+				<reportElement key="textField-1" x="416" y="21" width="114" height="9"/>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif" size="7"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date())]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement key="line-1" x="1" y="18" width="535" height="1" forecolor="#000000"/>
+			</line>
+			<textField>
+				<reportElement x="414" y="35" width="80" height="20"/>
+				<textElement textAlignment="Right">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="494" y="35" width="40" height="20"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="2" y="1" width="203" height="13"/>
+				<textElement verticalAlignment="Middle">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[* Despesas que possuem Obserções]]></text>
+			</staticText>
+		</band>
+	</pageFooter>
+	<lastPageFooter>
+		<band height="38" splitType="Stretch">
+			<staticText>
+				<reportElement x="321" y="14" width="143" height="20"/>
+				<textElement textAlignment="Justified" verticalAlignment="Middle">
+					<font size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Total de despesas no período:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="468" y="14" width="60" height="20"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="9" isBold="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[new java.text.DecimalFormat("R$ #,##0.00", new java.text.DecimalFormatSymbols (new java.util.Locale ("pt", "BR"))).format($V{somaDespesas})]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="2" y="3" width="204" height="13"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[* Despesas que possuem Obserções]]></text>
+			</staticText>
+		</band>
+	</lastPageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>
